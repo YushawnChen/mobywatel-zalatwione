@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>mObywatel „Załatwione” – prototyp koncepcyjny</title>
+<meta name="description" content="Klikalny prototyp koncepcji mObywatela, w którym sprawy urzędowe załatwiają się prawie same: dane podajesz raz, wszystko potwierdzasz jednym podpisem, a tryb prosty i pomoc bliskiej osoby pozwalają korzystać każdemu.">
+<meta name="theme-color" content="#0b2341">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23d4213d'/%3E%3Cpath d='M16 44V24h6l1 3c2-2 5-4 8-4s5 1 6 4c2-2 5-4 8-4 5 0 7 3 7 8v13h-7V32c0-2-1-3-3-3s-4 1-5 3v12h-7V32c0-2-1-3-3-3s-4 1-5 3v12z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css?v=6">
+</head>
+<body>
+<a class="skip" href="#screen">Przejdź do aplikacji</a>
+
+<div class="stage">
+  <!-- Panel przewodnika (desktop) / arkusz (mobile) -->
+  <aside class="guide" id="guide" aria-label="Przewodnik po prototypie">
+    <div class="guide-inner">
+      <p class="badge-proto">Prototyp koncepcyjny · mObywatel Challenge</p>
+      <h1 class="guide-title">mObywatel <span>„Załatwione”</span></h1>
+      <p class="guide-lead">Aplikacja, w której <strong>państwo przychodzi do Ciebie</strong>. Dane podajesz raz, wnioski są wypełnione z góry, a Ty tylko sprawdzasz i potwierdzasz. Wszystko prostym językiem, z trybem dla seniorów i pomocą bliskiej osoby.</p>
+
+      <div class="guide-section">
+        <h2>Wybierz osobę</h2>
+        <div class="persona-switch" role="radiogroup" aria-label="Osoba w prototypie">
+          <button class="persona-btn" role="radio" data-persona="anna">
+            <span class="avatar av-anna" aria-hidden="true">AN</span>
+            <span><strong>Anna, 34 l.</strong><small>Poznań · mama Zosi, pomaga swojej mamie</small></span>
+          </button>
+          <button class="persona-btn" role="radio" data-persona="halina">
+            <span class="avatar av-halina" aria-hidden="true">HN</span>
+            <span><strong>Halina, 71 l.</strong><small>Gniezno · tryb prosty, pomoc od córki</small></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <h2>Kliknij ścieżkę i sprawdź</h2>
+        <ol class="scenarios" id="scenarios"></ol>
+      </div>
+
+      <div class="guide-section">
+        <h2>5 zasad tej wersji</h2>
+        <ul class="principles">
+          <li><b>Dane podajesz tylko raz.</b> Wniosek jest wypełniony z rejestrów, a przy każdym polu widać, skąd jest.</li>
+          <li><b>Jedno zdarzenie, jeden wniosek.</b> „Przeprowadzam się” lub „urodziło się dziecko” to kilka spraw, ale jeden podpis.</li>
+          <li><b>Nic nie wysyłamy bez Ciebie.</b> Przed podpisem widzisz, co, komu i po co wysyłasz.</li>
+          <li><b>Widzisz, kto sprawdzał Twoje dane.</b> Udostępniasz tylko to, co trzeba, np. samo „mam 18 lat”.</li>
+          <li><b>Każdy da radę.</b> Tryb prosty, czytanie na głos, duży tekst i bezpieczna pomoc bliskiej osoby.</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
+        <h2>Dziś i w tej wersji</h2>
+        <table class="compare">
+          <thead><tr><th scope="col">Sprawa</th><th scope="col">Dziś</th><th scope="col">Tutaj</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Przeprowadzka</th><td>4–5 osobnych spraw, często wizyta w urzędzie</td><td><b>1 wniosek, 5 kroków</b></td></tr>
+            <tr><th scope="row">Narodziny dziecka</th><td>6 spraw w 4 instytucjach</td><td><b>1 wniosek, 4 kroki</b></td></tr>
+            <tr><th scope="row">Zgubiony dowód</th><td>zgłoszenie + osobno PESEL</td><td><b>2 dotknięcia</b></td></tr>
+            <tr><th scope="row">Pismo z urzędu</th><td>język prawniczy</td><td><b>„Po ludzku” + odpowiedź</b></td></tr>
+          </tbody>
+        </table>
+        <p class="fine">Liczba kroków w kolumnie „Dziś” jest szacunkowa i opisuje typową ścieżkę.</p>
+      </div>
+
+      <div class="guide-section guide-actions">
+        <button class="btn btn-ghost btn-sm" id="resetDemo" type="button">Zacznij demo od nowa</button>
+      </div>
+      <p class="fine">Niezależny prototyp koncepcyjny przygotowany na mObywatel Challenge. To nie jest oficjalna aplikacja mObywatel ani usługa administracji. Wszystkie osoby, dokumenty i dane są fikcyjne. Nic nie jest nigdzie wysyłane.</p>
+    </div>
+  </aside>
+
+  <!-- Telefon -->
+  <main class="device-wrap">
+    <div class="device" id="device">
+      <div class="statusbar" aria-hidden="true"><span>9:41</span><span class="notch"></span><span class="sb-icons">5G ▮▮▮ 86%</span></div>
+      <div class="app" id="app">
+        <header class="appbar" id="appbar"></header>
+        <div class="screen" id="screen" tabindex="-1"></div>
+        <nav class="tabbar" id="tabbar" aria-label="Główne menu"></nav>
+      </div>
+      <div class="overlay" id="overlay" hidden></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <button class="guide-fab" id="guideFab" type="button" aria-controls="guide" aria-expanded="false">
+      <span aria-hidden="true">?</span> Jak to działa
+    </button>
+  </main>
+</div>
+
+<script src="app.js?v=6"></script>
+</body>
+</html>

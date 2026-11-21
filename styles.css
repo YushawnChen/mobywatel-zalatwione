@@ -75,7 +75,7 @@ button, a, input, select, textarea, [tabindex] { -webkit-tap-highlight-color: tr
 .statusbar .notch { width: 120px; height: 34px; background: #0d0f13; border-radius: 20px; margin-top: -4px; }
 .sb-icons { font-size: 11px; letter-spacing: .02em; }
 .app { position: relative; height: 100%; border-radius: 42px; overflow: hidden; background: var(--surface-2); display: flex; flex-direction: column; font-size: calc(16px * var(--fs)); }
-.guide-fab, .guide-close { display: none; }
+.guide-fab, .guide .guide-close { display: none; }
 
 /* ---------- App chrome ---------- */
 .appbar { flex: none; padding: 52px 16px 10px; display: flex; align-items: center; gap: 10px; background: var(--surface-2); }
@@ -388,7 +388,7 @@ button.row:hover { background: var(--surface-2); }
   .toast { top: 12px; }
   .guide { position: fixed; z-index: 60; inset: 0; max-height: none; background: var(--bg); padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); visibility: hidden; }
   .guide.open { visibility: visible; }
-  .guide-close { display: flex; margin-bottom: 14px; }
+  .guide .guide-close { display: flex; margin-bottom: 14px; }
   .guide-title { font-size: 26px; }
   .guide-fab { display: inline-flex; align-items: center; gap: 5px; background: var(--navy); color: #fff; border: 0; border-radius: 99px; padding: 8px; font-weight: 700; font-size: 12px; cursor: pointer; flex: none; }
   .guide-fab span:first-child { width: 20px; height: 20px; border-radius: 50%; background: var(--red); display: grid; place-items: center; }

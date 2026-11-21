@@ -350,7 +350,7 @@ SCREENS.start = () => {
     hero = `<section class="hero" aria-labelledby="heroT">
       <span class="pill">${icon('heart', 'width="14" height="14"')} Zdarzenie w Twoim życiu</span>
       <h3 id="heroT">Witamy Zosię na świecie!</h3>
-      <p>Szpital zgłosił narodziny 17.11. Przygotowaliśmy jeden wniosek zamiast sześciu: akt urodzenia, PESEL, meldunek, NFZ i 800+.</p>
+      <p>Szpital zgłosił narodziny 17.11. Przygotowaliśmy jeden wniosek zamiast pięciu: akt urodzenia, PESEL, meldunek, NFZ i 800+.</p>
       <button type="button" class="btn" data-go="#/wniosek/baby">Sprawdź i podpisz · 4 kroki</button>
     </section>`;
   } else if (!S.idDone && !S.lostDone) {
@@ -880,7 +880,7 @@ const FLOWS = {
   /* ---------- Narodziny dziecka ---------- */
   baby: {
     title: 'Narodziny dziecka', icon: 'baby',
-    savings: 'Zamiast 6 wniosków w 4 instytucjach: jeden wniosek i jeden podpis',
+    savings: 'Zamiast 5 wniosków w 4 instytucjach: jeden wniosek i jeden podpis',
     init: () => ({ name: 'Zofia', name2: '', surname: 'Nowak', partner: 'idle', b: { akt: true, pesel: true, meld: true, nfz: true, s800: true, becik: false }, acct: 'zus', iban: '' }),
     steps: [
       {
@@ -1319,7 +1319,7 @@ function intents() {
     { re: /\b(ania|anie|ani|corka|corki|zadzwon)\b/, a: () => A ? ({ t: 'To Ty jesteś Anią 🙂 Możesz pomagać mamie w sprawach urzędowych.' + actBtn('Pomoc dla mamy', '#/rodzina') }) : ({ t: 'Zadzwonić do Ani? W pełnej aplikacji połączę od razu.' + `<button type="button" class="btn btn-sm" data-act="callAnia" style="margin-top:8px">${icon('phone')}Zadzwoń do Ani</button>` }) },
     { re: /(zgubil|ukradl|ukradzi|kradziez|stracil|portfel|zgubion)/, a: () => ({ t: 'Przykro mi. Zablokujmy to od razu: <b>unieważnię dowód i zastrzegę PESEL</b>, żeby nikt nie wziął kredytu na Twoje dane. Przed wysłaniem pokażę Ci wszystko do potwierdzenia.' + actBtn('Zablokuj dokumenty', '#/wniosek/lost') + '<p class="small muted" style="margin:8px 0 0">Kartę płatniczą zastrzeżesz pod numerem 828 828 828.</p>' }) },
     { re: /(przeprowadz|przenosz|meldun|zamelduj|zmien\w* adres|nowe mieszkanie|wyprowadz|zmiana adresu)/, a: () => A ? ({ t: 'Pomogę z przeprowadzką. W jednym wniosku: <b>zameldowanie</b>, zmiana adresu w <b>dowodzie rejestracyjnym</b> i w <b>urzędzie skarbowym</b>. Właściciel mieszkania potwierdzi w aplikacji. Dowodu osobistego nie trzeba wymieniać.' + actBtn('Zacznij · 5 kroków', '#/wniosek/move') }) : ({ t: 'Przeprowadzkę najlepiej załatwić razem z Anią. Mogę jej wysłać prośbę.' + `<button type="button" class="btn btn-sm" data-act="askAnia" style="margin-top:8px">Poproś Anię</button>` }) },
-    { re: /(dzieck|urodz|corecz|synek|zosi|zosia|800|becikow|noworod)/, a: () => ({ t: S.babyDone ? 'Wniosek po narodzinach Zosi już wysłany. Akt urodzenia, PESEL i 800+ są w toku.' + actBtn('Zobacz status', '#/sprawa/baby') : 'Gratulacje! Szpital zgłosił narodziny 17.11. Mam gotowy <b>jeden wniosek zamiast sześciu</b>: akt urodzenia, PESEL, meldunek, NFZ i 800+. Becikowe nie przysługuje (próg dochodowy). Potrzebuję tylko imienia i Twojego podpisu.' + actBtn('Sprawdź i podpisz', '#/wniosek/baby') }) },
+    { re: /(dzieck|urodz|corecz|synek|zosi|zosia|800|becikow|noworod)/, a: () => ({ t: S.babyDone ? 'Wniosek po narodzinach Zosi już wysłany. Akt urodzenia, PESEL i 800+ są w toku.' + actBtn('Zobacz status', '#/sprawa/baby') : 'Gratulacje! Szpital zgłosił narodziny 17.11. Mam gotowy <b>jeden wniosek zamiast pięciu</b>: akt urodzenia, PESEL, meldunek, NFZ i 800+. Becikowe nie przysługuje (próg dochodowy). Potrzebuję tylko imienia i Twojego podpisu.' + actBtn('Sprawdź i podpisz', '#/wniosek/baby') }) },
     { re: /(kupil\w* (auto|samoch)|rejestr|przerejestr|nowe auto|uzywan)/, a: () => ({ t: 'Zarejestrujmy auto bez kolejki. Sprawdzę jego historię w CEPiK, zawiadomię ubezpieczyciela i zapłacisz opłatę w aplikacji. Na rejestrację masz 30 dni od zakupu.' + actBtn('Zarejestruj auto', '#/wniosek/car') }) },
     { re: /(\boc\b|ubezpiecz|polis)/, a: () => ({ t: 'OC Twojej Skody Octavia (PO 4821N) <b>odnowi się samo 1.12.2026</b>. Nic nie musisz robić. Jeśli chcesz zmienić ubezpieczyciela, wypowiedz polisę przed tym dniem.' + `<div class="card">${kv([['Pojazd', 'PO 4821N'], ['Koniec okresu', '01.12.2026']])}${src('UFG')}</div>` + chips([['Przypomnij 3 dni wcześniej', 'przypomnij o oc'], ['Szczegóły auta', '#/dokument/pojazd']]) }) },
     { re: /(przypomnij o oc|przypomnij)/, a: () => ({ t: 'Gotowe. Przypomnę Ci 28 listopada rano. ✔' }) },
@@ -1642,7 +1642,7 @@ function setPersona(p) {
    Przewodnik (panel boczny)
    ========================================================= */
 const SCEN = [
-  ['anna', '#/wniosek/baby', 'Urodziło się dziecko', '6 spraw w 4 urzędach, ale 1 podpis. Drugi rodzic potwierdza w swojej aplikacji.'],
+  ['anna', '#/wniosek/baby', 'Urodziło się dziecko', '5 spraw w 4 urzędach, ale 1 podpis. Drugi rodzic potwierdza w swojej aplikacji.'],
   ['anna', '#/wniosek/move', 'Przeprowadzka bez urzędu', 'Meldunek, CEPiK, urząd skarbowy naraz. Właściciel potwierdza jednym kliknięciem.'],
   ['anna', '#/pismo/us', 'Pismo z urzędu po ludzku', 'Wezwanie z US wyjaśnione prostym językiem i odpowiedź z fakturami.'],
   ['anna', '#/udostepnij/dowod', 'Pokaż tylko „mam 18 lat”', 'Udostępnij tylko to, co trzeba. Bez imienia i PESEL.'],

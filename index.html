@@ -7,7 +7,7 @@
 <meta name="description" content="Klikalny prototyp koncepcji mObywatela, w którym sprawy urzędowe załatwiają się prawie same: dane podajesz raz, wszystko potwierdzasz jednym podpisem, a tryb prosty i pomoc bliskiej osoby pozwalają korzystać każdemu.">
 <meta name="theme-color" content="#0b2341">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23d4213d'/%3E%3Cpath d='M16 44V24h6l1 3c2-2 5-4 8-4s5 1 6 4c2-2 5-4 8-4 5 0 7 3 7 8v13h-7V32c0-2-1-3-3-3s-4 1-5 3v12h-7V32c0-2-1-3-3-3s-4 1-5 3v12z' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <a class="skip" href="#screen">Przejdź do aplikacji</a>
@@ -16,6 +16,7 @@
   <!-- Panel przewodnika (desktop) / arkusz (mobile) -->
   <aside class="guide" id="guide" aria-label="Przewodnik po prototypie">
     <div class="guide-inner">
+      <button type="button" class="btn btn-ghost btn-sm guide-close" id="closeGuide" data-act="closeGuide">Zamknij scenariusze</button>
       <p class="badge-proto">Prototyp koncepcyjny · mObywatel Challenge</p>
       <h1 class="guide-title">mObywatel <span>„Załatwione”</span></h1>
       <p class="guide-lead">Aplikacja, w której <strong>państwo przychodzi do Ciebie</strong>. Dane podajesz raz, wnioski są wypełnione z góry, a Ty tylko sprawdzasz i potwierdzasz. Wszystko prostym językiem, z trybem dla seniorów i pomocą bliskiej osoby.</p>
@@ -51,23 +52,18 @@
       </div>
 
       <div class="guide-section">
-        <h2>Dziś i w tej wersji</h2>
-        <table class="compare">
-          <thead><tr><th scope="col">Sprawa</th><th scope="col">Dziś</th><th scope="col">Tutaj</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">Przeprowadzka</th><td>4–5 osobnych spraw, często wizyta w urzędzie</td><td><b>1 wniosek, 5 kroków</b></td></tr>
-            <tr><th scope="row">Narodziny dziecka</th><td>6 spraw w 4 instytucjach</td><td><b>1 wniosek, 4 kroki</b></td></tr>
-            <tr><th scope="row">Zgubiony dowód</th><td>zgłoszenie + osobno PESEL</td><td><b>2 dotknięcia</b></td></tr>
-            <tr><th scope="row">Pismo z urzędu</th><td>język prawniczy</td><td><b>„Po ludzku” + odpowiedź</b></td></tr>
-          </tbody>
-        </table>
-        <p class="fine">Liczba kroków w kolumnie „Dziś” jest szacunkowa i opisuje typową ścieżkę.</p>
+        <h2>Co pokazuje ta koncepcja?</h2>
+        <ul class="principles">
+          <li><b>Nowi rodzice:</b> sprawdź, jak jeden podpis uruchamia kilka spraw, a status każdej widać w aplikacji.</li>
+          <li><b>Osoby odpowiadające na pisma:</b> porównaj oryginał z prostym wyjaśnieniem, zmień odpowiedź i obejrzyj ją przed podpisem.</li>
+          <li><b>Seniorzy i bliscy:</b> przygotuj wniosek jako Anna, przełącz się na Halinę i sprawdź, jak Halina sama decyduje o wysłaniu.</li>
+        </ul>
       </div>
 
       <div class="guide-section guide-actions">
         <button class="btn btn-ghost btn-sm" id="resetDemo" type="button">Zacznij demo od nowa</button>
       </div>
-      <p class="fine">Niezależny prototyp koncepcyjny przygotowany na mObywatel Challenge. To nie jest oficjalna aplikacja mObywatel ani usługa administracji. Wszystkie osoby, dokumenty i dane są fikcyjne. Nic nie jest nigdzie wysyłane.</p>
+      <p class="fine">Niezależny prototyp koncepcyjny przygotowany na mObywatel Challenge. To nie jest oficjalna aplikacja mObywatel ani usługa administracji. Wszystkie osoby, dokumenty i dane są fikcyjne. Wnioski, podpisy i płatności są symulowane. Korzystaj z danych testowych.</p>
     </div>
   </aside>
 
@@ -83,12 +79,10 @@
       <div class="overlay" id="overlay" hidden></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
-    <button class="guide-fab" id="guideFab" type="button" aria-controls="guide" aria-expanded="false">
-      <span aria-hidden="true">?</span> Jak to działa
-    </button>
   </main>
 </div>
 
-<script src="app.js?v=6"></script>
+<noscript><p class="card">Włącz JavaScript w przeglądarce, aby przejść przez interaktywny prototyp.</p></noscript>
+<script src="app.js?v=7"></script>
 </body>
 </html>

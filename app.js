@@ -63,7 +63,7 @@ const LOGO = '<span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64"><pa
 /* =========================================================
    Dane (fikcyjne)
    ========================================================= */
-const TODAY = 'piątek, 20 listopada 2026';
+const TODAY = 'Data w scenariuszu: 20 listopada 2026';
 const PEOPLE = {
   anna: {
     first: 'Anna', voc: 'Anno', full: 'Anna Nowak', age: 34, initials: 'AN', av: 'av-anna',
@@ -143,6 +143,7 @@ const me = () => PEOPLE[S.persona];
 const set = () => S.settings[S.persona];
 const isAnna = () => S.persona === 'anna';
 const curAddress = () => (isAnna() && S.moved ? S.newAddress : me().address);
+const child = () => S.child || { full: 'Zofia Nowak', insurance: true, benefit: true, address: curAddress() };
 
 /* =========================================================
    Komponenty
@@ -211,34 +212,41 @@ function speak(text, btn) {
 let sheetKind = null; let lastFocus = null;
 function openSheet(html, { full = false, kind = 'info', label = 'Okno' } = {}) {
   const ov = $('#overlay');
-  lastFocus = document.activeElement;
+  if (ov.hidden) lastFocus = document.activeElement;
+  $('#app').inert = true;
+  $('#guide').inert = true;
   ov.innerHTML = `<div class="sheet ${full ? 'full' : ''}" role="dialog" aria-modal="true" aria-label="${esc(label)}">${html}</div>`;
   ov.hidden = false; sheetKind = kind;
   const f = ov.querySelector('[autofocus], input, button');
-  if (f) setTimeout(() => f.focus(), 30);
+  if (f) f.focus();
 }
 function closeSheet() {
   const ov = $('#overlay');
-  ov.hidden = true; ov.innerHTML = ''; sheetKind = null;
+  if (ov.hidden) return;
   stopListening();
-  if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  ov.hidden = true; ov.innerHTML = ''; sheetKind = null;
+  $('#app').inert = false;
+  $('#guide').inert = false;
+  if (lastFocus?.isConnected) lastFocus.focus();
+  lastFocus = null;
 }
 const sheetHead = (title, extra = '') => `<div class="sheet-head"><h2>${title}</h2>${extra}<button type="button" class="iconbtn" data-act="closeSheet" aria-label="Zamknij">${icon('x')}</button></div>`;
 
 /* Podpis / potwierdzenie – nic nie wychodzi bez zgody */
-function openSign({ title = 'Sprawdź i podpisz', items = [], note = '', onSigned }) {
+function openSign({ title = 'Sprawdź i podpisz', items = [], review = '', note = '', onSigned }) {
   openSign.cb = onSigned;
   openSheet(`${sheetHead(title)}
     <div class="sheet-body">
       <p class="p">Tylko to zostanie wysłane. Nic więcej.</p>
       <div class="sign-what">${items.map(i => `<div class="row"><span class="ic info">${icon(i.icon || 'send')}</span><span class="ct"><b>${esc(i.to)}</b><span>${esc(i.what)}</span></span></div>`).join('')}</div>
+      ${review}
       ${note ? `<div style="margin-top:10px">${banner(note, '', 'info')}</div>` : ''}
       <button type="button" class="check" role="checkbox" aria-checked="false" data-act="signConsent" style="margin-top:12px">
-        <span class="box">${icon('check')}</span><span class="ct"><b>Potwierdzam, że dane są prawdziwe</b><span>Podpis ma taką samą moc jak podpis w urzędzie.</span></span>
+        <span class="box">${icon('check')}</span><span class="ct"><b>Potwierdzam dane w tej symulacji</b><span>Po podpisie zobaczysz wynik scenariusza.</span></span>
       </button>
       <div class="faceid" id="faceid" aria-hidden="true">${icon('face')}</div>
       <div class="btn-row">
-        <button type="button" class="btn btn-block" id="signBtn" data-act="doSign" disabled aria-disabled="true">${icon('lock')}Podpisz (Face ID lub PIN)</button>
+        <button type="button" class="btn btn-block" id="signBtn" data-act="doSign" disabled aria-disabled="true">${icon('lock')}Podpisz w symulacji</button>
         <button type="button" class="btn btn-ghost btn-block" data-act="closeSheet">Jeszcze nie</button>
       </div>
       <p class="ai-note">Prototyp: podpis jest symulowany, nic nie jest wysyłane.</p>
@@ -269,16 +277,20 @@ function render(force) {
   app.style.setProperty('--fs', st.fs);
 
   if (r.name === 'asystent') { location.replace('#/start'); setTimeout(openAssistant, 50); return; }
+  if (r.name === 'wniosek' && Object.hasOwn(FLOWS, r.arg) && !isAnna()) {
+    S.persona = 'anna';
+    save();
+  }
 
-  const view = (SCREENS[r.name] || SCREENS.start)(r.arg);
+  const view = (Object.hasOwn(SCREENS, r.name) ? SCREENS[r.name] : SCREENS.start)(r.arg);
   $('#screen').innerHTML = view.html;
   renderAppbar(view);
   renderTabbar(view.tab || r.name);
   syncGuide();
   if (view.after) view.after();
   if (changed || force) {
-    $('#screen').scrollTop = 0;
-    if (changed) $('#screen').focus({ preventScroll: true });
+    $('#screen').scrollTo({ top: 0, behavior: 'instant' });
+    $('#screen').focus({ preventScroll: true });
   }
   if (st.autoRead && changed && view.say) setTimeout(() => speak(view.say), 300);
 }
@@ -288,10 +300,11 @@ function renderAppbar(view) {
   const unseen = S.unseen[S.persona] || 0;
   const bell = `<button type="button" class="iconbtn" data-act="openNotifs" aria-label="Powiadomienia${unseen ? `, nowe: ${unseen}` : ''}">${icon('bell')}${unseen ? `<span class="dot">${unseen}</span>` : ''}</button>`;
   const ask = `<button type="button" class="iconbtn" data-act="openAssistant" aria-label="Asystent">${icon('spark')}</button>`;
-  if (view.title) {
-    bar.innerHTML = `<button type="button" class="iconbtn" data-go="${view.back || '#/start'}" aria-label="Wróć">${icon('chevL')}</button><div class="title">${view.title}</div>${ask}`;
+  const guide = `<button type="button" class="guide-fab" id="guideFab" data-act="toggleGuide" aria-controls="guide" aria-expanded="${$('#guide').classList.contains('open')}"><span aria-hidden="true">?</span><span>Scenariusze</span></button>`;
+  if (view.title || (set().simple && view.back)) {
+    bar.innerHTML = `<button type="button" class="iconbtn" data-go="${view.back || '#/start'}" aria-label="Wróć">${icon('chevL')}</button><div class="title">${view.title || ''}</div>${ask}${guide}`;
   } else {
-    bar.innerHTML = `<div class="brand">${LOGO}<span>mObywatel</span></div><div class="spacer"></div>${ask}${bell}`;
+    bar.innerHTML = `<div class="brand">${LOGO}<span>mObywatel</span></div><div class="spacer"></div>${ask}${bell}${guide}`;
   }
 }
 
@@ -329,7 +342,7 @@ const SCREENS = {};
 
 /* ---------- Start ---------- */
 SCREENS.start = () => {
-  if (set().simple) return simpleHome();
+  if (set().simple || !isAnna()) return simpleHome();
   const p = me();
   const cases = S.cases.anna.filter(c => c.status < c.steps.length);
   let hero;
@@ -368,7 +381,7 @@ SCREENS.start = () => {
       <button type="button" class="doc-mini g-dl" data-go="#/dokument/prawojazdy"><span class="dm-ic">${icon('card')}</span><b>Prawo jazdy</b><span>kat. B · 3 pkt</span></button>
       <button type="button" class="doc-mini g-car" data-go="#/dokument/pojazd"><span class="dm-ic">${icon('car')}</span><b>Skoda Octavia</b><span>PO 4821N</span></button>
       ${S.babyDone
-        ? `<button type="button" class="doc-mini g-kdr" data-go="#/dokument/zosia"><span class="dm-ic">${icon('baby')}</span><b>Zofia Nowak</b><span>akt urodzenia</span></button>`
+        ? `<button type="button" class="doc-mini g-kdr" data-go="#/dokument/zosia"><span class="dm-ic">${icon('baby')}</span><b>${esc(child().full)}</b><span>akt urodzenia</span></button>`
         : `<button type="button" class="doc-mini dm-all" data-go="#/dokumenty"><span class="dm-ic">${icon('grid')}</span><b>Wszystkie</b><span>dokumenty</span></button>`}
     </div>
     <h3 class="h3">Coś się zmienia w Twoim życiu?</h3>
@@ -404,7 +417,7 @@ function simpleHome() {
   const pending = S.halinaInbox.filter(x => !x.done);
   const nfz = S.letters.nfz;
   const intro = pending.length
-    ? `Dzień dobry, Pani Halino. Ania przygotowała dla Pani wniosek o nowy dowód osobisty. Wystarczy sprawdzić i powiedzieć tak.`
+    ? `Dzień dobry, Pani Halino. Ania przygotowała dla Pani wniosek o nowy dowód osobisty. Proszę sprawdzić i nacisnąć przycisk wysłania.`
     : `Dzień dobry, Pani Halino. Ma Pani dwie recepty do odbioru w aptece.${nfz.read ? '' : ' Jest też nowe pismo z NFZ.'}`;
   return {
     html: `<div class="hello"><h2>Dzień dobry, ${p.voc}!</h2><p>${TODAY}</p></div>
@@ -419,6 +432,7 @@ function simpleHome() {
       <button type="button" class="big-tile t-navy" data-act="callAnia">${icon('phone')}Zadzwoń do Ani</button>
       <button type="button" class="big-tile" data-act="openAssistant">${icon('mic')}Zapytaj głosem</button>
       <button type="button" class="big-tile" data-go="#/ustawienia">${icon('text')}Większe litery</button>
+      <button type="button" class="big-tile" data-go="#/sprawy">${icon('folder')}Moje sprawy</button>
     </div>
     <p class="p small muted" style="margin-top:16px">Ania może Pani pomagać, ale niczego nie podpisze za Panią. <button type="button" class="linkbtn" data-go="#/rodzina">Co widzi Ania?</button></p>`,
     say: intro
@@ -449,7 +463,7 @@ SCREENS.dokumenty = () => {
       <div class="doc-top"><span>Pojazd</span><span>PO 4821N</span></div>
       <div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Octavia</div><div class="meta">OC do 01.12.2026<br>Przegląd do 05.01.2027</div></div></div></button>
     ${S.carDone ? `<div class="doc-card g-car" style="filter:hue-rotate(-20deg)"><div class="doc-top"><span>Pojazd · nowy</span><span>PZ 5R418</span></div><div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Fabia</div><div class="meta">Pozwolenie czasowe do 19.12.2026<br>OC do 14.03.2027</div></div></div></div>` : ''}
-    ${S.babyDone ? `<button type="button" class="doc-card g-kdr card-btn" data-go="#/dokument/zosia" style="display:block;border:0;text-align:left;color:#fff;width:100%"><div class="doc-top"><span>Rodzina</span><span>Odpis aktu</span></div><div class="doc-body"><div class="photo">${icon('baby')}</div><div><div class="name">Zofia Nowak</div><div class="meta">ur. 17.11.2026, Poznań<br>PESEL nadany</div></div></div></button>` : ''}`
+    ${S.babyDone ? `<button type="button" class="doc-card g-kdr card-btn" data-go="#/dokument/zosia" style="display:block;border:0;text-align:left;color:#fff;width:100%"><div class="doc-top"><span>Rodzina</span><span>Odpis aktu</span></div><div class="doc-body"><div class="photo">${icon('baby')}</div><div><div class="name">${esc(child().full)}</div><div class="meta">ur. 17.11.2026, Poznań<br>PESEL nadany</div></div></div></button>` : ''}`
   };
 };
 
@@ -494,11 +508,11 @@ SCREENS.dokument = (arg) => {
       </div>`
     };
   }
-  if (arg === 'zosia') {
+  if (arg === 'zosia' && isAnna() && S.babyDone) {
     return {
-      title: 'Zofia Nowak', back: '#/dokumenty', tab: 'dokumenty',
-      html: `<div class="doc-card g-kdr"><div class="doc-top"><span>Odpis skrócony aktu urodzenia</span><span>USC Poznań</span></div><div class="doc-body"><div class="photo">${icon('baby')}</div><div><div class="name">Zofia Nowak</div><div class="meta">ur. 17.11.2026, Poznań<br>PESEL 26311700000</div></div></div></div>
-      <div class="card">${kv([['Matka', 'Anna Nowak'], ['Ojciec', 'Marek Kowalski'], ['Zameldowanie', esc(curAddress())], ['Ubezpieczenie NFZ', 'zgłoszona przez mamę'], ['800+', 'przyznane od 11.2026']])}${src('Rejestr Stanu Cywilnego i rejestr PESEL')}</div>
+      title: esc(child().full), back: '#/dokumenty', tab: 'dokumenty',
+      html: `<div class="doc-card g-kdr"><div class="doc-top"><span>Odpis skrócony aktu urodzenia</span><span>USC Poznań</span></div><div class="doc-body"><div class="photo">${icon('baby')}</div><div><div class="name">${esc(child().full)}</div><div class="meta">ur. 17.11.2026, Poznań<br>PESEL 26311700000</div></div></div></div>
+      <div class="card">${kv([['Matka', 'Anna Nowak'], ['Ojciec', 'Marek Kowalski'], ['Zameldowanie', esc(child().address || 'poza tym wnioskiem')], ['Ubezpieczenie NFZ', child().insurance ? 'objęte wnioskiem' : 'poza tym wnioskiem'], ['800+', child().benefit ? 'objęte wnioskiem' : 'poza tym wnioskiem']])}${src('Rejestr Stanu Cywilnego i rejestr PESEL')}</div>
       <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="toastInfo" data-arg="Odpis w PDF zapisalibyśmy w telefonie. W prototypie niczego nie pobieramy.">${icon('download')}Pobierz odpis (PDF)</button></div>`
     };
   }
@@ -541,7 +555,8 @@ SCREENS.udostepnij = (arg) => {
     <div class="reveal">${fields.map(f => o.show.includes(f) ? `<div class="on"><span>${icon('check', 'width="16" height="16"')} ${f}</span><span>widoczne</span></div>` : `<div class="off"><span>${f}</span><span>ukryte</span></div>`).join('')}</div>
     <h3 class="h3">Pokaż kod do zeskanowania</h3>
     <div class="qr-wrap">${qrSvg(shareChoice.length * 7919 + 13)}<div class="timer" aria-hidden="true"><i id="qrBar"></i></div><p class="small muted" id="qrTxt" style="margin:8px 0 0">Kod jednorazowy · wygaśnie za 60 s</p></div>
-    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}Zasymuluj skanowanie przez sklep</button></div>`,
+    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}Zasymuluj skanowanie</button>
+      <button type="button" class="btn btn-ghost btn-block" data-act="newQr" hidden>Wygeneruj nowy kod</button></div>`,
     after() {
       let left = 60;
       shareTimer = setInterval(() => {
@@ -549,7 +564,11 @@ SCREENS.udostepnij = (arg) => {
         if (!bar) { clearInterval(shareTimer); return; }
         bar.style.width = (left / 60 * 100) + '%';
         txt.textContent = left > 0 ? `Kod jednorazowy · wygaśnie za ${left} s` : 'Kod wygasł. Dotknij opcji, aby wygenerować nowy.';
-        if (left <= 0) clearInterval(shareTimer);
+        if (left <= 0) {
+          clearInterval(shareTimer);
+          $('[data-act="simScan"]').disabled = true;
+          $('[data-act="newQr"]').hidden = false;
+        }
       }, 1000);
     }
   };
@@ -567,6 +586,7 @@ SCREENS.sprawy = () => {
   const mine = S.cases[S.persona];
   const active = mine.filter(c => c.status < c.steps.length), done = mine.filter(c => c.status >= c.steps.length);
   return {
+    title: set().simple ? 'Moje sprawy' : '', back: '#/start',
     html: `<h2 class="h">Sprawy</h2>
     ${active.length ? `<h3 class="h3">W toku · śledź jak paczkę</h3>${active.map(c => cardBtn({ icon: c.icon || 'folder', tone: 'info', title: esc(c.title), sub: esc(c.who), due: esc(c.steps[c.status]) + ' …', dueTone: 'due-warn', go: `#/sprawa/${c.id}` })).join('')}` : ''}
     ${isAnna() ? `<h3 class="h3">Załatw według sytuacji życiowej</h3>
@@ -584,7 +604,8 @@ SCREENS.sprawa = (id) => {
     title: esc(c.title), back: '#/sprawy', tab: 'sprawy',
     html: `<div class="card"><div class="ct"><b>${esc(c.title)}</b><span>${esc(c.who)}</span></div>
       <div class="divider"></div>${tracker(c)}</div>
-      ${finished ? banner('Sprawa zakończona. Potwierdzenie (UPO) masz w Pismach.', 'ok', 'check') : banner('Powiadomimy Cię o każdej zmianie. Nie musisz dzwonić do urzędu.', 'info', 'bell')}
+      ${c.id === 'usreply' ? banner('Urzędowe poświadczenie odbioru (UPO): odpowiedź doręczona 20.11.2026. Potwierdzenie demonstracyjne.', 'ok', 'check') : ''}
+      ${finished ? banner('Sprawa zakończona w symulacji.', 'ok', 'check') : banner('Powiadomimy Cię o każdej zmianie. Nie musisz dzwonić do urzędu.', 'info', 'bell')}
       ${c.contact ? `<div class="card">${kv([['Prowadzi', c.contact], ['Numer sprawy', c.no || '—']])}</div>` : ''}`
   };
 };
@@ -608,6 +629,15 @@ SCREENS.pisma = () => ({
 });
 
 let letterView = 'plain';
+const TAX_DRAFT = 'W odpowiedzi na wezwanie z 13.11.2026 przesyłam faktury dokumentujące wydatki na docieplenie budynku jednorodzinnego w łącznej kwocie 12 400,00 zł, odliczone w ramach ulgi termomodernizacyjnej w zeznaniu PIT-37 za 2025 r.';
+const TAX_ATTACHMENTS = [
+  ['FV 2025/08/114 · Termo-Bud', 'Docieplenie ścian · 8 900,00 zł'],
+  ['FV 2025/09/031 · Termo-Bud', 'Robocizna · 2 300,00 zł'],
+  ['FV 2025/09/377 · Hurtownia Izol', 'Materiały · 1 200,00 zł']
+];
+let taxDraft = TAX_DRAFT;
+const taxAttachments = () => TAX_ATTACHMENTS.map(([name, detail]) =>
+  `<div class="attach">${icon('clip')}<span class="ct"><b>${name}</b><span>${detail}</span></span></div>`).join('');
 const LETTER_TEXT = {
   us: {
     orig: `<p><b>WEZWANIE</b></p><p>Na podstawie art. 155 § 1 w związku z art. 272 pkt 3 ustawy z dnia 29 sierpnia 1997 r. – Ordynacja podatkowa, Naczelnik Urzędu Skarbowego Poznań-Grunwald wzywa Panią do złożenia wyjaśnień oraz przedłożenia dokumentów potwierdzających poniesienie wydatków na realizację przedsięwzięcia termomodernizacyjnego, odliczonych w zeznaniu PIT-37 za rok podatkowy 2025 w kwocie 12 400,00 zł, w terminie 7 dni od dnia doręczenia niniejszego wezwania.</p><p>Jednocześnie poucza się, że niezastosowanie się do wezwania może skutkować wszczęciem postępowania podatkowego oraz nałożeniem kary porządkowej na podstawie art. 262 § 1 pkt 2 Ordynacji podatkowej.</p><p>Sprawę prowadzi: Tomasz Wrzesiński, starszy komisarz skarbowy, tel. 61 000 00 00.</p>`,
@@ -644,7 +674,9 @@ SCREENS.pismo = (id) => {
   const plainText = T.plain.map(([h, p]) => `${h} ${p}`).join(' ');
   let actions = '';
   if (L.id === 'us') actions = S.letters.us.answered
-    ? banner('Odpowiedź wysłana 20.11. Urząd potwierdził odbiór (UPO).', 'ok', 'check')
+    ? `${banner('Odpowiedź wysłana 20.11. Urząd potwierdził odbiór (UPO) w symulacji.', 'ok', 'check')}
+      ${S.letters.us.reply ? `<details class="card"><summary>Wysłana odpowiedź</summary><p class="draft-preview">${esc(S.letters.us.reply)}</p>${taxAttachments()}</details>` : ''}
+      <button type="button" class="btn btn-ghost btn-block" data-go="#/sprawa/usreply">Sprawdź doręczenie</button>`
     : `<button type="button" class="btn btn-block" data-act="replyUS">${icon('send')}Odpowiedz i dołącz faktury</button>
        <button type="button" class="btn btn-ghost btn-block" data-act="toastInfo" data-arg="Przygotowalibyśmy prośbę o przedłużenie terminu o 7 dni. Wysłałabyś ją jednym podpisem.">${icon('clock')}Poproś o więcej czasu</button>
        <button type="button" class="btn btn-ghost btn-block" data-act="askAbout" data-arg="Co mam zrobić z pismem z urzędu skarbowego?">${icon('spark')}Zapytaj asystenta o to pismo</button>`;
@@ -690,7 +722,7 @@ SCREENS.oprojekcie = () => ({
   <p class="p">Koncepcja na mObywatel Challenge. Pokazuje, jak aplikacja mogłaby <b>sama proponować sprawy</b> w ważnych momentach życia, wypełniać wnioski danymi z rejestrów i prowadzić je do końca.</p>
   <div class="card"><b>Jak działa asystent?</b><p class="p small" style="margin-top:6px">W prototypie rozpoznaje intencje po polsku na podstawie reguł, więc działa bez kluczy API, bez logowania i bez kosztów. Docelowo asystentem byłby polski model językowy Bielik (lub PLLuM) działający na serwerach w Polsce, z dostępem tylko do danych, na które się zgodzisz. Zawsze prosi o potwierdzenie przed wysłaniem.</p></div>
   <div class="card"><b>Skąd dane we wnioskach?</b><p class="p small" style="margin-top:6px">Z rejestrów, które państwo już prowadzi: PESEL, Rejestr Dowodów Osobistych, CEPiK, Rejestr Stanu Cywilnego, UFG. To zasada „tylko raz”: urząd nie pyta o to, co już wie. Przy każdym polu widać źródło.</p></div>
-  <div class="card"><b>Dostępność</b><p class="p small" style="margin-top:6px">Tryb prosty, tekst do 150%, wysoki kontrast, czytanie na głos, sterowanie głosem, pełna obsługa klawiaturą i czytnikiem ekranu. Projektowane z myślą o WCAG 2.2 AA.</p></div>
+  <div class="card"><b>Dostępność</b><p class="p small" style="margin-top:6px">Tryb prosty, tekst do 150%, wysoki kontrast, czytanie na głos, sterowanie głosem, etykiety dla czytników ekranu i widoczny fokus klawiatury.</p></div>
   <p class="fine">To nie jest oficjalna aplikacja mObywatel. Wszystkie dane są fikcyjne, nic nie jest wysyłane.</p>`
 });
 
@@ -716,7 +748,8 @@ SCREENS.prywatnosc = () => {
     ${!S.reported ? `<div class="card" style="border:2px solid var(--red)">
       <div style="display:flex;gap:12px"><span class="ic red">${icon('alert')}</span><div class="ct"><b>Czy to byłaś Ty?</b><span>${sus.when} · ${esc(sus.who)} sprawdzała Twój PESEL przy wniosku o pożyczkę.</span></div></div>
       <div class="btn-row two"><button type="button" class="btn btn-sm" data-act="notMe">To nie ja</button><button type="button" class="btn btn-ghost btn-sm" data-act="wasMe">Tak, to ja</button></div>
-    </div>` : banner('Zgłoszone. PESEL jest zastrzeżony, a sprawa trafiła do UODO i na policję. Firma pożyczkowa nie udzieli pożyczki na Twoje dane.', 'ok', 'check')}
+    </div>` : S.reported === 'recognized' ? banner('Oznaczyłaś to sprawdzenie jako swoje.', 'ok', 'check')
+      : banner('Podejrzane sprawdzenie zostało zgłoszone w symulacji.', 'ok', 'check')}
     <div class="list">${log.map(l => `<button type="button" class="row" data-act="logDetail" data-arg="${l.id}"><span class="ic ${l.tone}">${icon(l.ic)}</span><span class="ct"><b>${esc(l.who)}</b><span>${esc(l.why)} · ${esc(l.when)}</span></span>${icon('chevR', 'width="18"')}</button>`).join('')}</div>
     <h3 class="h3">Aktywne udostępnienia</h3>
     ${S.shares.length ? `<div class="list">${S.shares.map(s => `<div class="row"><span class="ic ok">${icon('qr')}</span><span class="ct"><b>${esc(s.who)}</b><span>${esc(s.what)} · ${esc(s.until)}</span></span><button type="button" class="btn btn-ghost btn-sm" data-act="revoke" data-arg="${s.id}">Cofnij</button></div>`).join('')}</div>` : '<p class="p muted small">Nikt nie ma teraz stałego dostępu do Twoich danych.</p>'}
@@ -778,6 +811,7 @@ SCREENS.rodzina = () => {
 
 SCREENS.prosba = (id) => {
   const x = S.halinaInbox.find(i => i.id === id);
+  if (isAnna()) return SCREENS.rodzina();
   if (!x || x.done) return simpleHome();
   const p = PEOPLE.halina;
   const text = 'Ania przygotowała wniosek o nowy dowód osobisty. Pani obecny dowód jest ważny do 15 stycznia 2027 roku. Zdjęcie zrobiła Ania telefonem 19 listopada i aplikacja sprawdziła, że spełnia wymagania. Odbiór w Urzędzie Miasta w Gnieźnie, 9 grudnia o 10:00. Dowód jest bezpłatny.';
@@ -788,7 +822,7 @@ SCREENS.prosba = (id) => {
     <ul class="summary-list" style="margin-top:12px">
       <li>${icon('check')}<span>Dla: <b>${p.full}</b><small>dane z rejestru PESEL</small></span></li>
       <li>${icon('check')}<span>Zdjęcie zrobione przez Anię 19.11<small>aplikacja sprawdziła, że spełnia wymagania</small></span></li>
-      <li>${icon('check')}<span>Odbiór: <b>Urząd Miasta Gniezna</b><small>wtorek 9 grudnia, godz. 10:00</small></span></li>
+      <li>${icon('check')}<span>Odbiór: <b>Urząd Miasta Gniezna</b><small>środa 9 grudnia, godz. 10:00</small></span></li>
       <li>${icon('check')}<span>Koszt: <b>0 zł</b><small>dowód jest bezpłatny</small></span></li>
     </ul>
     <div class="btn-row">
@@ -875,9 +909,9 @@ const FLOWS = {
         t: 'Co załatwimy przy okazji?',
         html: d => `<p class="p">Sprawdziliśmy, co Ci przysługuje. Odznacz, jeśli czegoś nie chcesz.</p>
           ${checkItem('b.akt', 'Akt urodzenia', 'Urząd Stanu Cywilnego · obowiązkowe', d, true)}
-          ${checkItem('b.pesel', 'Numer PESEL dla Zosi', 'Nadawany automatycznie z aktem', d, true)}
+          ${checkItem('b.pesel', 'Numer PESEL dziecka', 'Nadawany automatycznie z aktem', d, true)}
           ${checkItem('b.meld', 'Zameldowanie u mamy', esc(curAddress()), d)}
-          ${checkItem('b.nfz', 'Ubezpieczenie zdrowotne (NFZ)', 'Zgłosimy Zosię przez Twojego pracodawcę', d)}
+          ${checkItem('b.nfz', 'Ubezpieczenie zdrowotne (NFZ)', 'Zgłosimy dziecko przez Twojego pracodawcę', d)}
           ${checkItem('b.s800', 'Świadczenie 800+', '800 zł miesięcznie od listopada, bo wniosek składasz w ciągu 3 miesięcy od narodzin', d)}
           <div class="check" aria-disabled="true" style="cursor:default"><span class="box" style="border-style:dashed"></span><span class="ct"><b>Becikowe (1 000 zł)</b><span>Nie przysługuje: dochód w Twojej rodzinie przekracza 1 922 zł na osobę. <button type="button" class="linkbtn" data-act="toastInfo" data-arg="Dochód liczymy z PIT za 2025 r. (dane z Krajowej Administracji Skarbowej, za Twoją zgodą). Jeśli się zmienił, możesz złożyć wniosek ręcznie.">Skąd to wiemy?</button></span></span></div>`,
         ok: () => true
@@ -900,11 +934,22 @@ const FLOWS = {
     ].filter(Boolean),
     done: d => {
       S.babyDone = true;
-      const c = addCase('anna', { id: 'baby', icon: 'baby', title: `Narodziny: ${d.name} ${d.surname}`, who: 'USC Poznań, Urząd Miasta, ZUS, NFZ', steps: ['Wniosek złożony', 'Akt urodzenia sporządzony', 'PESEL nadany', 'Zameldowanie i NFZ', '800+ przyznane'], status: 1, contact: 'USC Poznań, ul. Libelta 16/20', no: 'USC.5311.2026.1187' });
-      progress('anna', c.id, [[3500, `Akt urodzenia ${d.name} jest gotowy. Odpis jest w Dokumentach.`], [7000, `${d.name} ma już numer PESEL.`], [11000, 'Zameldowanie i ubezpieczenie zdrowotne: zrobione.']]);
+      S.child = {
+        full: [d.name.trim(), d.name2.trim(), d.surname].filter(Boolean).join(' '),
+        insurance: d.b.nfz, benefit: d.b.s800, address: d.b.meld ? curAddress() : null
+      };
+      const updates = [
+        [3500, 'Akt urodzenia sporządzony', 'Akt urodzenia jest gotowy. Odpis jest w Dokumentach.'],
+        [7000, 'PESEL nadany', 'Dziecko ma już numer PESEL.'],
+        d.b.meld && [9500, 'Zameldowano dziecko', 'Zameldowanie dziecka jest gotowe.'],
+        d.b.nfz && [11000, 'Dziecko zgłoszone do ubezpieczenia', 'Zgłoszenie do ubezpieczenia zdrowotnego jest gotowe.'],
+        d.b.s800 && [12500, '800+ przyznane', 'Świadczenie 800+ jest przyznane.']
+      ].filter(Boolean);
+      const c = addCase('anna', { id: 'baby', icon: 'baby', title: `Narodziny: ${S.child.full}`, who: 'Urząd Stanu Cywilnego i instytucje wybrane we wniosku', steps: ['Wniosek złożony', ...updates.map(([, step]) => step)], status: 1, contact: 'USC Poznań, ul. Libelta 16/20', no: 'USC.5311.2026.1187' });
+      progress('anna', c, updates.map(([ms, , msg]) => [ms, msg]));
       return c;
     },
-    doneText: d => ({ h: `Gotowe! Witaj, ${esc(d.name)}!`, p: 'Sprawy trafiły do 4 instytucji. Nie musisz nigdzie chodzić. Powiadomimy Cię o każdym kroku.', save: '6 wniosków → 1 · 0 wizyt w urzędzie · ok. 3 godziny mniej' })
+    doneText: d => ({ h: `Gotowe! Witaj, ${esc(d.name)}!`, p: 'Wybrane sprawy zostały przekazane. Powiadomimy Cię o każdym kroku.', save: 'Jeden podpis i wspólny status wybranych spraw' })
   },
 
   /* ---------- Przeprowadzka ---------- */
@@ -918,7 +963,7 @@ const FLOWS = {
         html: d => `<div class="field"><label for="f-q">Nowy adres</label><input id="f-q" type="text" placeholder="Zacznij pisać, np. Ogrodowa" value="${esc(d.q)}" data-bind="q" data-live="addr" autocomplete="off" aria-describedby="addrHint"></div>
           <p class="small muted" id="addrHint">Podpowiadamy adresy z państwowego rejestru TERYT, więc nie pomylisz kodu pocztowego.</p>
           <div id="addrList" class="list" role="listbox" aria-label="Podpowiedzi adresów">${addrOptions(d)}</div>
-          ${d.addr ? banner(`Wybrany adres: <b>${esc(d.addr)}</b>`, 'ok', 'pin') : ''}`,
+          ${d.addr ? `<div id="selectedAddress">${banner(`Wybrany adres: <b>${esc(d.addr)}</b>`, 'ok', 'pin')}</div>` : ''}`,
         ok: d => !!d.addr
       },
       {
@@ -928,7 +973,7 @@ const FLOWS = {
           ${choice('kind', 'czasowy', 'Na jakiś czas', 'Np. na studia albo kontrakt. Stary adres zostaje.', d)}</div>
           <div class="field"><label for="f-from">Od kiedy?</label><input id="f-from" type="date" value="${d.from}" data-bind="from"></div>
           ${d.kind === 'czasowy' ? `<div class="field"><label for="f-until">Do kiedy?</label><input id="f-until" type="date" value="${d.until}" data-bind="until" data-live="1"></div>` : ''}`,
-        ok: d => d.kind === 'staly' || !!d.until
+        ok: d => !!d.from && (d.kind === 'staly' || d.until >= d.from)
       },
       {
         t: 'Kto jest właścicielem mieszkania?',
@@ -952,23 +997,28 @@ const FLOWS = {
       }
     ],
     summary: d => [
-      { to: 'Urząd Miasta Poznania', what: `Zameldowanie ${d.kind === 'staly' ? 'na pobyt stały' : 'na pobyt czasowy'}: ${d.addr}, od ${fmtDate(d.from)}`, icon: 'home' },
-      d.owner === 'rent' && { to: d.ownerName, what: 'Prośba o potwierdzenie, że mieszkasz w jego lokalu', icon: 'users' },
+      { to: d.addr.endsWith('Swarzędz') ? 'Urząd Miasta i Gminy Swarzędz' : 'Urząd Miasta Poznania', what: `Zameldowanie ${d.kind === 'staly' ? 'na pobyt stały' : 'na pobyt czasowy'}: ${d.addr}, od ${fmtDate(d.from)}${d.kind === 'czasowy' ? ` do ${fmtDate(d.until)}` : ''}`, icon: 'home' },
+      d.owner === 'rent' && { to: d.ownerName, what: 'Prośba o potwierdzenie zamieszkania', icon: 'users' },
+      d.owner === 'coop' && { to: 'Zarządca budynku', what: 'Prośba o potwierdzenie zamieszkania', icon: 'users' },
       d.u.cepik && { to: 'Wydział Komunikacji (CEPiK)', what: 'Zmiana adresu w dowodzie rejestracyjnym PO 4821N', icon: 'car' },
       d.u.us && { to: 'Urząd Skarbowy', what: 'Aktualizacja adresu zamieszkania', icon: 'file' },
       d.u.poz && { to: 'Przychodnia „Ogrody”', what: 'Deklaracja wyboru lekarza rodzinnego', icon: 'heart' }
     ].filter(Boolean),
     done: d => {
-      S.moved = true; S.newAddress = d.addr;
-      const steps = ['Wniosek złożony'];
-      if (d.owner === 'rent') steps.push(`${d.ownerName} potwierdził`);
-      steps.push('Zameldowano', 'Adres zmieniony w CEPiK i urzędzie skarbowym');
-      const c = addCase('anna', { id: 'move', icon: 'truck', title: `Przeprowadzka: ${d.addr.split(',')[0]}`, who: 'Urząd Miasta Poznania + 2 instytucje', steps, status: 1, contact: 'Wydział Spraw Obywatelskich UM Poznania', no: 'WSO.5340.2026.4410' });
-      const msgs = d.owner === 'rent' ? [[4000, `${d.ownerName} potwierdził Twoje zameldowanie.`], [8000, 'Jesteś zameldowana pod nowym adresem.']] : [[4500, 'Jesteś zameldowana pod nowym adresem.']];
-      progress('anna', c.id, msgs);
+      if (d.kind === 'staly') { S.moved = true; S.newAddress = d.addr; }
+      const updates = [
+        d.owner === 'rent' && [4000, `${d.ownerName} potwierdził`, `${d.ownerName} potwierdził Twoje zameldowanie.`],
+        d.owner === 'coop' && [4000, 'Zarządca potwierdził', 'Zarządca potwierdził Twoje zameldowanie.'],
+        [8000, 'Zameldowano', 'Jesteś zameldowana pod nowym adresem.'],
+        d.u.cepik && [9500, 'Zaktualizowano dane w CEPiK', 'Dane pojazdu zostały zaktualizowane.'],
+        d.u.us && [11000, 'Urząd skarbowy otrzymał nowy adres', 'Urząd skarbowy otrzymał nowy adres.'],
+        d.u.poz && [12500, 'Przychodnia otrzymała deklarację', 'Przychodnia otrzymała deklarację.']
+      ].filter(Boolean);
+      const c = addCase('anna', { id: 'move', icon: 'truck', title: `Przeprowadzka: ${d.addr.split(',')[0]}`, who: 'Urząd gminy i instytucje wybrane we wniosku', steps: ['Wniosek złożony', ...updates.map(([, step]) => step)], status: 1, contact: 'Wydział Spraw Obywatelskich', no: 'WSO.5340.2026.4410' });
+      progress('anna', c, updates.map(([ms, , msg]) => [ms, msg]));
       return c;
     },
-    doneText: d => ({ h: 'Przeprowadzka zgłoszona', p: `Nowy adres: ${esc(d.addr)}. Stary meldunek usuniemy sami.`, save: '4 sprawy → 1 · 0 wizyt w urzędzie · ok. 2–3 godziny mniej' })
+    doneText: d => ({ h: 'Przeprowadzka zgłoszona', p: `Nowy adres: ${esc(d.addr)}. ${d.kind === 'staly' ? 'Stary meldunek usuniemy sami.' : 'Stały meldunek pozostaje bez zmian.'}`, save: '4 sprawy → 1 · 0 wizyt w urzędzie · ok. 2–3 godziny mniej' })
   },
 
   /* ---------- Nowy dowód ---------- */
@@ -1032,7 +1082,7 @@ const FLOWS = {
     done: d => {
       S.idDone = true;
       const c = addCase('anna', { id: 'id', icon: 'id', title: 'Nowy dowód osobisty', who: 'Urząd Miasta Poznania', steps: ['Wniosek złożony', 'Urzędnik sprawdził wniosek', 'Dowód w produkcji', `Odbiór: ${d.slot.replace('|', ', ')}`], status: 1, contact: 'Wydział Spraw Obywatelskich UM Poznania', no: 'DO.2026.11.88213' });
-      progress('anna', c.id, [[5000, 'Urzędnik sprawdził Twój wniosek o dowód. Wszystko się zgadza.']]);
+      progress('anna', c, [[5000, 'Urzędnik sprawdził Twój wniosek o dowód. Wszystko się zgadza.']]);
       return c;
     },
     doneText: d => ({ h: 'Wniosek o dowód złożony', p: `Odbiór: ${esc(d.slot.replace('|', ', godz. '))}. Dodaliśmy termin do Twojego kalendarza.`, save: 'Bez formularza i bez kolejki · 1 wizyta zamiast 2' })
@@ -1076,10 +1126,10 @@ const FLOWS = {
     steps: [
       {
         t: 'Jakie auto kupiłaś?',
-        html: d => `<div class="field"><label for="f-plate">Numer rejestracyjny lub VIN</label><input id="f-plate" type="text" placeholder="np. PZ 5R418" value="${esc(d.plate)}" data-bind="plate" data-live="1" autocomplete="off"></div>
-          <button type="button" class="btn btn-ghost btn-block" data-act="carScan">${icon('camera')}Zrób zdjęcie umowy kupna – odczytamy dane</button>
-          ${d.found ? `<h3 class="h3">Historia pojazdu</h3><div class="card">${kv([['Pojazd', 'Skoda Fabia 1.0 TSI, 2019'], ['Przebieg', '84 312 km (03.2026)'], ['Przegląd', 'ważny do 11.03.2027'], ['OC', 'aktywne do 14.03.2027'], ['Kradzież / zastaw', 'brak']])}${src('CEPiK i Ubezpieczeniowy Fundusz Gwarancyjny')}</div>` : ''}`,
-        ok: d => d.found || d.plate.replace(/\s/g, '').length >= 5
+        html: d => `<div class="field"><label for="f-plate">Numer rejestracyjny (wpisz PZ 5R418)</label><input id="f-plate" type="text" placeholder="np. PZ 5R418" value="${esc(d.plate)}" data-bind="plate" data-live="1" autocomplete="off"></div>
+          <button type="button" class="btn btn-ghost btn-block" data-act="carScan">${icon('camera')}Użyj przykładowej umowy kupna</button>
+          <div id="carHistory" ${d.found ? '' : 'hidden'}><h3 class="h3">Historia pojazdu</h3><div class="card">${kv([['Pojazd', 'Skoda Fabia 1.0 TSI, 2019'], ['Przebieg', '84 312 km (03.2026)'], ['Przegląd', 'ważny do 11.03.2027'], ['OC', 'aktywne do 14.03.2027'], ['Kradzież / zastaw', 'brak']])}${src('CEPiK i Ubezpieczeniowy Fundusz Gwarancyjny')}</div></div>`,
+        ok: d => d.found
       },
       {
         t: 'Tablice rejestracyjne',
@@ -1114,7 +1164,7 @@ const FLOWS = {
     done: d => {
       S.carDone = true;
       const c = addCase('anna', { id: 'car', icon: 'car', title: 'Rejestracja Skody Fabia', who: 'Wydział Komunikacji UM Poznania', steps: ['Wniosek i opłata', 'Pozwolenie czasowe w aplikacji', 'Dowód rejestracyjny w druku', 'Dowód rejestracyjny wysłany pocztą'], status: 2, contact: 'Wydział Komunikacji, ul. Wołowska 20', no: 'WK.5410.2026.20931' });
-      progress('anna', c.id, [[6000, 'Dowód rejestracyjny Skody Fabia trafił do druku.']]);
+      progress('anna', c, [[6000, 'Dowód rejestracyjny Skody Fabia trafił do druku.']]);
       return c;
     },
     doneText: () => ({ h: 'Auto zarejestrowane', p: 'Możesz jeździć od dziś. Pozwolenie czasowe jest w Dokumentach, a dowód rejestracyjny przyjdzie pocztą.', save: '0 wizyt w wydziale komunikacji · ok. 2 godziny mniej' })
@@ -1133,25 +1183,26 @@ function camBox(d) {
   return `<div class="card" style="text-align:center">
     <div style="width:150px;height:190px;margin:0 auto;border-radius:90px/110px;border:3px dashed ${d.cam >= 4 ? 'var(--ok)' : 'var(--navy)'};display:grid;place-items:center;background:var(--surface-2)">${icon('user', 'width="80" height="80" style="color:#9aa6b6"')}</div>
     <ul class="summary-list" style="margin-top:12px;text-align:left">${checks.map((c, i) => `<li style="${i < d.cam ? '' : 'opacity:.45'}">${icon(i < d.cam ? 'check' : 'clock')}<span>${c}</span></li>`).join('')}</ul>
-    ${d.cam === 0 ? `<button type="button" class="btn btn-navy btn-block" data-act="takePhoto" style="margin-top:12px">${icon('camera')}Zrób zdjęcie</button>` : d.cam >= 4 ? `<p class="small" style="color:var(--ok);font-weight:700;margin:10px 0 0">Zdjęcie spełnia wymagania</p>` : `<p class="small muted" style="margin:10px 0 0">Sprawdzamy zdjęcie…</p>`}
+    ${d.cam === 0 ? `<button type="button" class="btn btn-navy btn-block" data-act="takePhoto" style="margin-top:12px">${icon('camera')}Zasymuluj zdjęcie</button>` : d.cam >= 4 ? `<p class="small" style="color:var(--ok);font-weight:700;margin:10px 0 0">Zdjęcie spełnia wymagania</p>` : `<p class="small muted" style="margin:10px 0 0">Sprawdzamy zdjęcie…</p>`}
   </div>`;
 }
 
 SCREENS.wniosek = (id) => {
+  if (!Object.hasOwn(FLOWS, id)) return SCREENS.sprawy();
   const def = FLOWS[id];
-  if (!def) return SCREENS.sprawy();
-  if (!isAnna()) { S.persona = 'anna'; save(); }
   if (!flow || flow.id !== id) flow = { id, step: 0, d: def.init() };
   if (flow.doneCase) return doneView(def);
-  const n = def.steps.length + 1; // + podsumowanie
   const i = flow.step;
   const isSummary = i >= def.steps.length;
+  const skipped = id === 'baby' && !flow.d.b.s800 ? 1 : 0;
+  const n = def.steps.length + 1 - skipped;
+  const visibleStep = isSummary ? n : i + 1;
   const step = def.steps[i];
   const body = isSummary ? summaryView(def) : step.html(flow.d);
   return {
     title: def.title, back: '#/sprawy', tab: 'sprawy',
-    html: `<div class="progress" aria-hidden="true">${Array.from({ length: n }, (_, k) => `<i class="${k <= i ? 'done' : ''}"></i>`).join('')}</div>
-      <div class="stepno">Krok ${i + 1} z ${n}</div>
+    html: `<div class="progress" aria-hidden="true">${Array.from({ length: n }, (_, k) => `<i class="${k < visibleStep ? 'done' : ''}"></i>`).join('')}</div>
+      <div class="stepno">Krok ${visibleStep} z ${n}</div>
       <h2 class="h">${isSummary ? 'Sprawdź i podpisz' : step.t}</h2>
       ${i === 0 ? `<div class="savings">${icon('clock')}<span>${def.savings}</span></div>` : ''}
       <div id="stepBody">${body}</div>
@@ -1162,17 +1213,32 @@ SCREENS.wniosek = (id) => {
 function flowFoot(def) {
   const i = flow.step, isSummary = i >= def.steps.length;
   const ok = isSummary || def.steps[i].ok(flow.d);
+  const skipAccount = flow.id === 'baby' && !flow.d.b.s800 && i === def.steps.length - 2;
   const prev = i > 0 ? `<button type="button" class="btn btn-ghost" data-act="flowPrev">${icon('chevL')}Wstecz</button>` : '';
   const next = isSummary
     ? `<button type="button" class="btn" data-act="flowSign">${icon('lock')}Podpisz i wyślij</button>`
-    : `<button type="button" class="btn" data-act="flowNext" ${ok ? '' : 'disabled aria-disabled="true" style="opacity:.45;cursor:not-allowed"'}>Dalej${icon('chevR')}</button>`;
+    : `<button type="button" class="btn" data-act="flowNext" ${ok ? '' : 'disabled aria-disabled="true"'}>${skipAccount ? 'Do podsumowania' : 'Dalej'}${icon('chevR')}</button>`;
   return prev ? `<div class="btn-row two" style="margin:0">${prev}${next}</div>` : next;
 }
 function refreshFoot() { const f = $('#flowFoot'); if (f && flow) f.innerHTML = flowFoot(FLOWS[flow.id]); }
 function rerenderStep() {
   const def = FLOWS[flow.id];
   const b = $('#stepBody');
-  if (b && flow.step < def.steps.length) { b.innerHTML = def.steps[flow.step].html(flow.d); refreshFoot(); }
+  if (!b || flow.step >= def.steps.length) return;
+  const active = document.activeElement;
+  const stepCount = def.steps.length + (flow.id === 'baby' && !flow.d.b.s800 ? 0 : 1);
+  const progress = $('.progress', $('#screen'));
+  if (progress.children.length !== stepCount) {
+    progress.innerHTML = Array.from({ length: stepCount }, (_, i) => `<i class="${i <= flow.step ? 'done' : ''}"></i>`).join('');
+    $('.stepno', $('#screen')).textContent = `Krok ${flow.step + 1} z ${stepCount}`;
+  }
+  b.innerHTML = def.steps[flow.step].html(flow.d);
+  refreshFoot();
+  if (!active.isConnected && active.dataset.act) {
+    const equivalent = [...b.querySelectorAll('[data-act]')].find(el =>
+      el.dataset.act === active.dataset.act && el.dataset.arg === active.dataset.arg);
+    (equivalent || $('#screen')).focus({ preventScroll: true });
+  }
 }
 function summaryView(def) {
   const items = def.summary(flow.d);
@@ -1206,18 +1272,30 @@ function addCase(who, c) {
   save();
   return c;
 }
-function progress(who, id, steps) {
-  steps.forEach(([ms, msg]) => setTimeout(() => {
-    const c = S.cases[who].find(x => x.id === id);
-    if (!c || c.status >= c.steps.length) return;
+function progress(who, c, steps) {
+  const now = Date.now();
+  c.pending = steps.map(([ms, msg]) => ({ at: now + ms, msg }));
+  save();
+  scheduleProgress(who, c);
+}
+
+function scheduleProgress(who, c) {
+  const next = c.pending?.[0];
+  if (!next) return;
+  setTimeout(() => {
+    if (!S.cases[who].includes(c) || c.status >= c.steps.length) return;
+    c.pending.shift();
     c.status++;
-    S.notifs[who].unshift({ t: msg, when: 'przed chwilą', go: `#/sprawa/${id}` });
-    if (S.persona === who) { S.unseen[who] = (S.unseen[who] || 0) + 1; toast(msg, 'bell'); }
+    S.notifs[who].unshift({ t: next.msg, when: 'przed chwilą', go: `#/sprawa/${c.id}` });
+    S.unseen[who] = (S.unseen[who] || 0) + 1;
     save();
+    scheduleProgress(who, c);
+    if (S.persona !== who) return;
+    toast(esc(next.msg), 'bell');
     const lt = $('#liveTrack');
-    if (lt && flow && flow.doneCase && flow.doneCase.id === id) { lt.innerHTML = tracker(c); renderAppbar({}); }
+    if (lt && flow?.doneCase === c) lt.innerHTML = tracker(c);
     else if (!sheetKind && ['start', 'sprawy', 'sprawa'].includes(route().name)) render();
-  }, ms));
+  }, Math.max(0, next.at - Date.now()));
 }
 
 /* =========================================================
@@ -1233,7 +1311,7 @@ function intents() {
     { re: /(dzien dobry|czesc|hej|witam|siema)/, a: () => ({ t: `Dzień dobry! W czym mogę pomóc? Możesz pisać albo mówić zwyczajnie, jak do urzędnika.` + chips(A ? [['Co mam do załatwienia?', 'co mam do załatwienia'], ['Przeprowadzam się', 'przeprowadzam się'], ['Kto sprawdzał moje dane?', 'kto sprawdzał moje dane']] : [['Moje leki', 'leki'], ['Mój dowód', 'dowód'], ['Zadzwoń do Ani', 'ania']]) }) },
     { re: /(dziekuj|dzieki)/, a: () => ({ t: 'Proszę bardzo! Gdyby coś jeszcze było potrzebne, jestem tutaj.' }) },
     { re: /(lek|recept|aptek)/, a: () => A ? ({ t: 'Nie masz teraz e-recept do odbioru. Twoja mama ma dwie. Chcesz zobaczyć jej terminy?' + chips([['Terminy mamy', '#/rodzina']]) }) : ({ t: 'Ma Pani <b>dwie recepty</b>: Metformina i Bisoprolol. Kod do apteki to <b>4821</b>.' + actBtn('Pokaż kod do apteki', '#/leki') }) },
-    { re: /(ania|anie|ani\b|corka|corki|zadzwon)/, a: () => A ? ({ t: 'To Ty jesteś Anią 🙂 Możesz pomagać mamie w sprawach urzędowych.' + actBtn('Pomoc dla mamy', '#/rodzina') }) : ({ t: 'Zadzwonić do Ani? W pełnej aplikacji połączę od razu.' + `<button type="button" class="btn btn-sm" data-act="callAnia" style="margin-top:8px">${icon('phone')}Zadzwoń do Ani</button>` }) },
+    { re: /\b(ania|anie|ani|corka|corki|zadzwon)\b/, a: () => A ? ({ t: 'To Ty jesteś Anią 🙂 Możesz pomagać mamie w sprawach urzędowych.' + actBtn('Pomoc dla mamy', '#/rodzina') }) : ({ t: 'Zadzwonić do Ani? W pełnej aplikacji połączę od razu.' + `<button type="button" class="btn btn-sm" data-act="callAnia" style="margin-top:8px">${icon('phone')}Zadzwoń do Ani</button>` }) },
     { re: /(zgubil|ukradl|ukradzi|kradziez|stracil|portfel|zgubion)/, a: () => ({ t: 'Przykro mi. Zablokujmy to od razu: <b>unieważnię dowód i zastrzegę PESEL</b>, żeby nikt nie wziął kredytu na Twoje dane. Przed wysłaniem pokażę Ci wszystko do potwierdzenia.' + actBtn('Zablokuj dokumenty', '#/wniosek/lost') + '<p class="small muted" style="margin:8px 0 0">Kartę płatniczą zastrzeżesz pod numerem 828 828 828.</p>' }) },
     { re: /(przeprowadz|przenosz|meldun|zamelduj|zmien\w* adres|nowe mieszkanie|wyprowadz|zmiana adresu)/, a: () => A ? ({ t: 'Pomogę z przeprowadzką. W jednym wniosku: <b>zameldowanie</b>, zmiana adresu w <b>dowodzie rejestracyjnym</b> i w <b>urzędzie skarbowym</b>. Właściciel mieszkania potwierdzi w aplikacji. Dowodu osobistego nie trzeba wymieniać.' + actBtn('Zacznij · 5 kroków', '#/wniosek/move') }) : ({ t: 'Przeprowadzkę najlepiej załatwić razem z Anią. Mogę jej wysłać prośbę.' + `<button type="button" class="btn btn-sm" data-act="askAnia" style="margin-top:8px">Poproś Anię</button>` }) },
     { re: /(dzieck|urodz|corecz|synek|zosi|zosia|800|becikow|noworod)/, a: () => ({ t: S.babyDone ? 'Wniosek po narodzinach Zosi już wysłany. Akt urodzenia, PESEL i 800+ są w toku.' + actBtn('Zobacz status', '#/sprawa/baby') : 'Gratulacje! Szpital zgłosił narodziny 17.11. Mam gotowy <b>jeden wniosek zamiast sześciu</b>: akt urodzenia, PESEL, meldunek, NFZ i 800+. Becikowe nie przysługuje (próg dochodowy). Potrzebuję tylko imienia i Twojego podpisu.' + actBtn('Sprawdź i podpisz', '#/wniosek/baby') }) },
@@ -1269,7 +1347,7 @@ function chatHtml() {
 function openAssistant() {
   openSheet(`${sheetHead(`${icon('spark', 'width="20" height="20" style="vertical-align:-4px;color:var(--red)"')} Asystent`)}
     <div class="sheet-body"><div class="chat" id="chat" aria-live="polite">${chatHtml()}</div></div>
-    <p class="ai-note">Prototyp: odpowiedzi są przygotowane wcześniej, bez modelu AI. Docelowo: polski model Bielik.<br>Nic nie wysyłam bez Twojego potwierdzenia.</p>
+    <p class="ai-note">Prototyp: odpowiedzi są przygotowane wcześniej, bez modelu AI. Docelowo: polski model Bielik.<br>Używaj danych testowych. Mikrofon korzysta z rozpoznawania mowy przeglądarki.</p>
     <form class="composer" id="composer" autocomplete="off">
       <label class="sr" for="askInput">Twoje pytanie</label>
       <input id="askInput" type="text" placeholder="${isAnna() ? 'Np. przeprowadzam się w grudniu' : 'Proszę napisać lub nacisnąć mikrofon'}" enterkeyhint="send">
@@ -1278,39 +1356,63 @@ function openAssistant() {
     </form>`, { full: true, kind: 'chat', label: 'Asystent' });
   scrollChat();
   $('#composer').addEventListener('submit', e => { e.preventDefault(); const v = $('#askInput').value.trim(); if (v) { $('#askInput').value = ''; ask(v); } });
-  if (S.unseen) renderAppbar({});
 }
 function scrollChat() { const b = $('.sheet-body'); if (b) b.scrollTop = b.scrollHeight; }
 async function ask(text) {
   if (sheetKind !== 'chat') openAssistant();
-  S.chat[S.persona].push({ from: 'user', text });
+  const history = S.chat[S.persona];
+  const html = answer(text);
+  history.push({ from: 'user', text }, { from: 'bot', html });
+  if (history.length > 30) history.splice(0, 2);
+  save();
   const chat = $('#chat');
-  chat.insertAdjacentHTML('beforeend', `<div class="msg user">${esc(text)}</div><div class="msg bot" id="typing"><span class="typing" aria-label="Asystent pisze"><i></i><i></i><i></i></span></div>`);
+  chat.insertAdjacentHTML('beforeend', `<div class="msg user">${esc(text)}</div><div class="msg bot"><span class="typing" aria-label="Asystent pisze"><i></i><i></i><i></i></span></div>`);
+  const placeholder = chat.lastElementChild;
   scrollChat();
   await wait(650);
-  const html = answer(text);
-  S.chat[S.persona].push({ from: 'bot', html });
-  if (S.chat[S.persona].length > 30) S.chat[S.persona].splice(0, 2);
-  save();
-  const t = $('#typing'); if (t) { t.removeAttribute('id'); t.innerHTML = html; }
+  if (!placeholder.isConnected) return;
+  placeholder.innerHTML = html;
   scrollChat();
   if (set().autoRead || set().simple) speak(html);
 }
 
 /* Rozpoznawanie mowy (Web Speech API – bezpłatne, w przeglądarce) */
 let rec = null;
-function stopListening() { if (rec) { try { rec.stop(); } catch (e) { /* */ } rec = null; } const m = $('#micBtn'); if (m) m.classList.remove('listening'); }
+function stopListening() {
+  const active = rec;
+  rec = null;
+  if (active) { try { active.abort(); } catch (e) { /* zakończone */ } }
+  const mic = $('#micBtn');
+  if (mic) { mic.classList.remove('listening'); mic.setAttribute('aria-label', 'Mów'); }
+}
 function listen() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { toast('Ta przeglądarka nie rozpoznaje mowy. Wpisz pytanie albo otwórz prototyp w Chrome.', 'info'); return; }
-  if (rec) { stopListening(); return; }
+  if (rec) { rec.stop(); return; }
   rec = new SR(); rec.lang = 'pl-PL'; rec.interimResults = true; rec.maxAlternatives = 1;
   const m = $('#micBtn'); m.classList.add('listening'); m.setAttribute('aria-label', 'Słucham… dotknij, aby zakończyć');
   let finalText = '';
-  rec.onresult = e => { let t = ''; for (const r of e.results) t += r[0].transcript; $('#askInput').value = t; if (e.results[e.results.length - 1].isFinal) finalText = t; };
-  rec.onerror = e => { stopListening(); if (e.error === 'not-allowed') toast('Brak dostępu do mikrofonu. Zezwól w przeglądarce albo wpisz pytanie.', 'info'); };
-  rec.onend = () => { stopListening(); const v = (finalText || $('#askInput')?.value || '').trim(); if (v) { $('#askInput').value = ''; ask(v); } };
-  try { rec.start(); } catch (e) { stopListening(); }
+  const recognition = rec;
+  const input = $('#askInput');
+  rec.onresult = e => {
+    if (rec !== recognition || !input.isConnected) return;
+    input.value = Array.from(e.results, result => result[0].transcript).join('');
+    if (e.results[e.results.length - 1].isFinal) finalText = input.value;
+  };
+  rec.onerror = () => {
+    if (rec !== recognition) return;
+    stopListening();
+    toast('Nie udało się rozpoznać mowy. Wpisz pytanie.', 'info');
+  };
+  rec.onend = () => {
+    if (rec !== recognition || !input.isConnected) return;
+    stopListening();
+    if (finalText.trim()) { input.value = ''; ask(finalText.trim()); }
+  };
+  try { rec.start(); } catch (e) {
+    stopListening();
+    toast('Nie udało się włączyć mikrofonu. Wpisz pytanie.', 'info');
+  }
 }
 
 /* =========================================================
@@ -1325,30 +1427,65 @@ const A = {
   askAbout: t => ask(t),
   openNotifs() {
     const list = S.notifs[S.persona];
-    S.unseen[S.persona] = 0; save(); renderAppbar({});
+    S.unseen[S.persona] = 0; save();
+    const trigger = $('[data-act="openNotifs"]');
+    if (trigger) { trigger.querySelector('.dot')?.remove(); trigger.setAttribute('aria-label', 'Powiadomienia'); }
     openSheet(`${sheetHead('Powiadomienia')}<div class="sheet-body"><div class="list">${list.map(n => `<button type="button" class="row" data-go="${n.go}"><span class="ic info">${icon('bell')}</span><span class="ct"><b>${esc(n.t)}</b><span>${esc(n.when)}</span></span></button>`).join('') || '<p class="p">Brak powiadomień.</p>'}</div></div>`, { kind: 'info', label: 'Powiadomienia' });
   },
   /* Wnioski */
-  pick(arg) { const [k, v] = arg.split('|'); flow.d[k] = v; rerenderStep(); },
+  pick(arg) {
+    const separator = arg.indexOf('|');
+    const key = arg.slice(0, separator);
+    const value = arg.slice(separator + 1);
+    if (flow.id === 'baby' && key === 'surname' && flow.d.surname !== value) flow.d.partner = 'idle';
+    flow.d[key] = value;
+    rerenderStep();
+  },
   tick(path) { const ks = path.split('.'); const last = ks.pop(); const o = ks.reduce((a, k) => a[k], flow.d); o[last] = !o[last]; rerenderStep(); },
   lockedInfo() { toast('Ten element jest obowiązkowy albo dzieje się automatycznie.', 'info'); },
   pickAddr(a) { flow.d.addr = a; flow.d.q = a.split(',')[0]; rerenderStep(); },
-  flowNext() { const def = FLOWS[flow.id]; if (!def.steps[flow.step].ok(flow.d)) return; flow.step++; render(true); },
-  flowPrev() { if (flow.step > 0) { flow.step--; render(true); } },
+  flowNext() {
+    const def = FLOWS[flow.id];
+    if (!def.steps[flow.step].ok(flow.d)) return;
+    flow.step++;
+    if (flow.id === 'baby' && !flow.d.b.s800 && flow.step === def.steps.length - 1) flow.step++;
+    render(true);
+  },
+  flowPrev() {
+    if (flow.step <= 0) return;
+    const def = FLOWS[flow.id];
+    flow.step--;
+    if (flow.id === 'baby' && !flow.d.b.s800 && flow.step === def.steps.length - 1) flow.step--;
+    render(true);
+  },
   flowSign() {
     const def = FLOWS[flow.id];
+    const submitted = flow;
     openSign({
-      title: 'Podpisz wniosek', items: def.summary(flow.d),
-      onSigned: () => { flow.doneCase = def.done(flow.d); save(); render(true); }
+      title: 'Podpisz wniosek', items: def.summary(submitted.d),
+      onSigned: () => {
+        if (flow !== submitted) return;
+        flow.doneCase = def.done(flow.d); save(); render(true);
+      }
     });
   },
   askPartner() {
-    flow.d.partner = 'wait'; rerenderStep();
-    setTimeout(() => { if (flow && flow.id === 'baby') { flow.d.partner = 'ok'; rerenderStep(); toast('Marek potwierdził imię i nazwisko Zosi.', 'check'); } }, 2200);
+    const draft = flow;
+    draft.d.partner = 'wait'; rerenderStep();
+    setTimeout(() => {
+      if (flow !== draft || draft.d.partner !== 'wait') return;
+      draft.d.partner = 'ok';
+      rerenderStep();
+      toast('Marek potwierdził imię i nazwisko dziecka.', 'check');
+    }, 2200);
   },
   takePhoto() {
-    flow.d.cam = 1; rerenderStep();
-    [2, 3, 4].forEach((n, i) => setTimeout(() => { if (flow && flow.id === 'id') { flow.d.cam = n; rerenderStep(); } }, 500 * (i + 1)));
+    const draft = flow;
+    draft.d.cam = 1; rerenderStep();
+    [2, 3, 4].forEach((n, i) => setTimeout(() => {
+      if (flow !== draft) return;
+      draft.d.cam = n; rerenderStep();
+    }, 500 * (i + 1)));
   },
   carScan() { flow.d.plate = 'PZ 5R418'; flow.d.found = true; rerenderStep(); toast('Odczytaliśmy dane z umowy kupna.', 'check'); },
   /* Podpis */
@@ -1359,17 +1496,23 @@ const A = {
   },
   async doSign() {
     const b = $('#signBtn'); if (!b || b.disabled) return;
-    b.disabled = true; b.textContent = 'Sprawdzam Face ID…';
+    b.disabled = true; b.textContent = 'Symulujemy weryfikację…';
     const f = $('#faceid'); f.classList.add('scan');
+    const cb = openSign.cb;
     await wait(1100);
-    f.classList.remove('scan'); f.classList.add('ok'); f.innerHTML = icon('check');
-    b.textContent = 'Podpisano';
-    await wait(500);
-    const cb = openSign.cb; closeSheet(); if (cb) cb();
+    if (!b.isConnected) return;
+    closeSheet();
+    cb?.();
   },
   /* Udostępnianie */
   shareOpt(k) { shareChoice = k; render(); },
+  newQr() { render(); },
   simScan() {
+    $('[data-act="simScan"]').disabled = true;
+    $('[data-act="newQr"]').hidden = false;
+    clearInterval(shareTimer);
+    $('#qrBar').style.width = '0%';
+    $('#qrTxt').textContent = 'Kod został wykorzystany.';
     const o = SHARE_OPTS[shareChoice];
     S.extraLog.unshift({ id: 'scan' + Date.now(), when: 'Przed chwilą', who: shareChoice === 'age' ? 'Sklep „Pod Ratuszem”' : shareChoice === 'name' ? 'Hotel „Stare Miasto”' : 'Twój bank', why: 'Zeskanowano Twój kod QR', what: o.show.join(', '), basis: 'Twoja zgoda (kod QR)', tone: 'ok', ic: 'qr' });
     save();
@@ -1379,20 +1522,25 @@ const A = {
   letterView(v) { letterView = v; render(); },
   replyUS() {
     openSheet(`${sheetHead('Odpowiedź do urzędu')}<div class="sheet-body">
-      <div class="field"><label for="usMsg">Treść (możesz zmienić)</label><textarea id="usMsg">W odpowiedzi na wezwanie z 13.11.2026 przesyłam faktury dokumentujące wydatki na docieplenie budynku jednorodzinnego w łącznej kwocie 12 400,00 zł, odliczone w ramach ulgi termomodernizacyjnej w zeznaniu PIT-37 za 2025 r.</textarea></div>
-      <h3 class="h3">Załączniki · znalezione w Twoich plikach</h3>
-      <div class="attach">${icon('clip')}<span class="ct"><b>FV 2025/08/114 · Termo-Bud</b><span>Docieplenie ścian · 8 900,00 zł</span></span></div>
-      <div class="attach">${icon('clip')}<span class="ct"><b>FV 2025/09/031 · Termo-Bud</b><span>Robocizna · 2 300,00 zł</span></span></div>
-      <div class="attach">${icon('clip')}<span class="ct"><b>FV 2025/09/377 · Hurtownia Izol</b><span>Materiały · 1 200,00 zł</span></span></div>
+      <div class="field"><label for="usMsg">Treść (możesz zmienić)</label><textarea id="usMsg" required maxlength="3000">${esc(taxDraft)}</textarea></div>
+      <h3 class="h3">Załączniki demonstracyjne</h3>
+      ${taxAttachments()}
       <div class="savings">${icon('check')}<span>Suma faktur: 12 400,00 zł. Zgadza się z kwotą ulgi.</span></div>
       <div class="btn-row"><button type="button" class="btn btn-block" data-act="sendUS">Dalej: podpisz i wyślij</button></div></div>`, { kind: 'info', label: 'Odpowiedź do urzędu' });
   },
   sendUS() {
-    closeSheet();
+    const field = $('#usMsg');
+    const reply = field.value.trim();
+    if (!reply) { toast('Wpisz treść odpowiedzi.', 'info'); field.focus(); return; }
+    taxDraft = reply;
     openSign({
       title: 'Wyślij odpowiedź', items: [{ to: 'Urząd Skarbowy Poznań-Grunwald', what: 'Wyjaśnienie + 3 faktury (12 400 zł)', icon: 'mail' }],
+      review: `<h3 class="h3">Odpowiedź do wysłania</h3><p class="draft-preview">${esc(reply)}</p>
+        <h3 class="h3">Załączniki</h3>${taxAttachments()}
+        <button type="button" class="linkbtn" data-act="replyUS">Wróć do edycji</button>`,
       onSigned: () => {
         S.letters.us.answered = true;
+        S.letters.us.reply = reply;
         addCase('anna', { id: 'usreply', icon: 'mail', title: 'Odpowiedź na wezwanie US', who: 'Urząd Skarbowy Poznań-Grunwald', steps: ['Wysłano 20.11', 'Doręczono (UPO)', 'Urząd sprawdza faktury', 'Ulga potwierdzona'], status: 2, contact: 'Tomasz Wrzesiński, tel. 61 000 00 00', no: '3061-SPV.4103.2026' });
         save(); render(true); toast('Wysłane i doręczone. Potwierdzenie odbioru (UPO) zapisaliśmy.', 'check');
       }
@@ -1406,7 +1554,7 @@ const A = {
   },
   bookNfz() {
     openSign({
-      title: 'Umówić badanie?', items: [{ to: 'Mammobus · Szpital w Gnieźnie', what: 'Środa 3 grudnia, godz. 10:20', icon: 'cal' }],
+      title: 'Umówić badanie?', items: [{ to: 'Mammobus · Szpital w Gnieźnie', what: 'Czwartek 3 grudnia, godz. 10:20', icon: 'cal' }],
       onSigned: () => { S.letters.nfz.booked = true; save(); render(true); toast('Umówione na 3 grudnia, 10:20. Przypomnimy dzień wcześniej.', 'check'); }
     });
   },
@@ -1431,7 +1579,7 @@ const A = {
       onSigned: () => { S.reported = true; S.peselBlocked = true; save(); render(true); toast('PESEL zastrzeżony. Zgłoszenie wysłane do UODO i na policję.', 'shield'); }
     });
   },
-  wasMe() { S.reported = true; save(); toast('Dziękujemy. Oznaczyliśmy to sprawdzenie jako Twoje.', 'check'); render(); },
+  wasMe() { S.reported = 'recognized'; save(); toast('Dziękujemy. Oznaczyliśmy to sprawdzenie jako Twoje.', 'check'); render(); },
   revoke(id) { S.shares = S.shares.filter(s => s.id !== id); save(); render(); toast('Dostęp cofnięty. Wypożyczalnia nie zobaczy już Twoich danych.', 'check'); },
   togglePesel() { S.peselBlocked = !S.peselBlocked; save(); render(); toast(S.peselBlocked ? 'PESEL zastrzeżony. Nikt nie weźmie kredytu na Twoje dane.' : 'Zastrzeżenie cofnięte. Możesz wziąć kredyt lub podpisać umowę.', 'lock'); },
   toggleNotify() { S.notifyEvery = !S.notifyEvery; save(); render(); },
@@ -1511,11 +1659,32 @@ A.scenario = i => {
 function syncGuide() {
   document.querySelectorAll('.persona-btn').forEach(b => b.setAttribute('aria-checked', b.dataset.persona === S.persona));
 }
-function closeGuide() { $('#guide').classList.remove('open'); $('#guideFab').setAttribute('aria-expanded', 'false'); }
+function closeGuide() {
+  const guide = $('#guide');
+  if (!guide.classList.contains('open')) return;
+  guide.classList.remove('open');
+  $('#app').inert = !$('#overlay').hidden;
+  const button = $('#guideFab');
+  button.setAttribute('aria-expanded', 'false');
+  button.focus();
+}
+A.toggleGuide = () => {
+  const guide = $('#guide');
+  guide.classList.add('open');
+  $('#guideFab').setAttribute('aria-expanded', 'true');
+  $('#app').inert = true;
+  $('#closeGuide').focus();
+};
+A.closeGuide = closeGuide;
+matchMedia('(max-width: 900px)').addEventListener('change', closeGuide);
 
 /* =========================================================
    Zdarzenia
    ========================================================= */
+$('.skip').addEventListener('click', e => {
+  e.preventDefault();
+  $('#screen').focus();
+});
 document.addEventListener('click', e => {
   const pb = e.target.closest('.persona-btn');
   if (pb) { closeGuide(); setPersona(pb.dataset.persona); return; }
@@ -1535,27 +1704,38 @@ document.addEventListener('click', e => {
   if (fn) { e.preventDefault(); fn(t.dataset.arg, t, e); }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'usMsg') { taxDraft = e.target.value; return; }
   const t = e.target.closest('[data-bind]');
   if (!t || !flow) return;
-  flow.d[t.dataset.bind] = t.value;
+  const key = t.dataset.bind;
+  flow.d[key] = t.value;
+  if (flow.id === 'baby' && (key === 'name' || key === 'name2')) flow.d.partner = 'idle';
   if (t.dataset.live === 'addr') {
-    if (flow.d.addr && norm(flow.d.addr).indexOf(norm(t.value)) !== 0) flow.d.addr = '';
+    if (flow.d.addr) {
+      flow.d.addr = '';
+      $('#selectedAddress')?.remove();
+    }
     $('#addrList').innerHTML = addrOptions(flow.d);
   }
-  if (flow.id === 'car' && t.dataset.bind === 'plate') flow.d.found = norm(t.value).replace(/\s/g, '').length >= 7;
+  if (flow.id === 'car' && key === 'plate') {
+    flow.d.found = norm(t.value).replace(/\s/g, '') === 'pz5r418';
+    $('#carHistory').hidden = !flow.d.found;
+  }
   refreshFoot();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (sheetKind) closeSheet(); else closeGuide(); }
 });
-$('#guideFab').addEventListener('click', () => { const g = $('#guide'); const o = !g.classList.contains('open'); g.classList.toggle('open', o); $('#guideFab').setAttribute('aria-expanded', o); });
-$('#resetDemo').addEventListener('click', () => { S = initialState(); save(); flow = null; shareChoice = 'age'; letterView = 'plain'; closeSheet(); closeGuide(); if (synth) synth.cancel(); location.hash = '#/start'; render(true); toast('Demo zaczyna się od nowa.', 'check'); });
-window.addEventListener('hashchange', () => { if (sheetKind && sheetKind !== 'chat') closeSheet(); render(); });
+$('#resetDemo').addEventListener('click', () => { S = initialState(); save(); flow = null; shareChoice = 'age'; letterView = 'plain'; taxDraft = TAX_DRAFT; closeSheet(); closeGuide(); if (synth) synth.cancel(); location.hash = '#/start'; render(true); toast('Demo zaczyna się od nowa.', 'check'); });
+window.addEventListener('hashchange', () => { closeSheet(); render(); });
 
 /* Start */
 const qp = new URLSearchParams(location.search).get('osoba');
-if (qp && PEOPLE[qp]) { S.persona = qp; save(); }
+if (qp && Object.hasOwn(PEOPLE, qp)) { S.persona = qp; save(); }
 if (synth) synth.getVoices();
 renderGuide();
 render(true);
+for (const [who, cases] of Object.entries(S.cases)) {
+  for (const c of cases) scheduleProgress(who, c);
+}
 })();

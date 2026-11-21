@@ -63,7 +63,7 @@ const LOGO = '<span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64"><pa
 /* =========================================================
    Dane (fikcyjne)
    ========================================================= */
-const TODAY = 'Data w scenariuszu: 20 listopada 2026';
+const TODAY = 'piątek, 20 listopada 2026';
 const PEOPLE = {
   anna: {
     first: 'Anna', voc: 'Anno', full: 'Anna Nowak', age: 34, initials: 'AN', av: 'av-anna',
@@ -242,11 +242,11 @@ function openSign({ title = 'Sprawdź i podpisz', items = [], review = '', note 
       ${review}
       ${note ? `<div style="margin-top:10px">${banner(note, '', 'info')}</div>` : ''}
       <button type="button" class="check" role="checkbox" aria-checked="false" data-act="signConsent" style="margin-top:12px">
-        <span class="box">${icon('check')}</span><span class="ct"><b>Potwierdzam dane w tej symulacji</b><span>Po podpisie zobaczysz wynik scenariusza.</span></span>
+        <span class="box">${icon('check')}</span><span class="ct"><b>Potwierdzam, że dane są prawdziwe</b><span>Podpis ma taką samą moc jak podpis w urzędzie.</span></span>
       </button>
       <div class="faceid" id="faceid" aria-hidden="true">${icon('face')}</div>
       <div class="btn-row">
-        <button type="button" class="btn btn-block" id="signBtn" data-act="doSign" disabled aria-disabled="true">${icon('lock')}Podpisz w symulacji</button>
+        <button type="button" class="btn btn-block" id="signBtn" data-act="doSign" disabled aria-disabled="true">${icon('lock')}Podpisz (Face ID lub PIN)</button>
         <button type="button" class="btn btn-ghost btn-block" data-act="closeSheet">Jeszcze nie</button>
       </div>
       <p class="ai-note">Prototyp: podpis jest symulowany, nic nie jest wysyłane.</p>
@@ -432,7 +432,7 @@ function simpleHome() {
       <button type="button" class="big-tile t-navy" data-act="callAnia">${icon('phone')}Zadzwoń do Ani</button>
       <button type="button" class="big-tile" data-act="openAssistant">${icon('mic')}Zapytaj głosem</button>
       <button type="button" class="big-tile" data-go="#/ustawienia">${icon('text')}Większe litery</button>
-      <button type="button" class="big-tile" data-go="#/sprawy">${icon('folder')}Moje sprawy</button>
+      <button type="button" class="big-tile big-tile-wide" data-go="#/sprawy">${icon('folder')}Moje sprawy</button>
     </div>
     <p class="p small muted" style="margin-top:16px">Ania może Pani pomagać, ale niczego nie podpisze za Panią. <button type="button" class="linkbtn" data-go="#/rodzina">Co widzi Ania?</button></p>`,
     say: intro
@@ -555,7 +555,7 @@ SCREENS.udostepnij = (arg) => {
     <div class="reveal">${fields.map(f => o.show.includes(f) ? `<div class="on"><span>${icon('check', 'width="16" height="16"')} ${f}</span><span>widoczne</span></div>` : `<div class="off"><span>${f}</span><span>ukryte</span></div>`).join('')}</div>
     <h3 class="h3">Pokaż kod do zeskanowania</h3>
     <div class="qr-wrap">${qrSvg(shareChoice.length * 7919 + 13)}<div class="timer" aria-hidden="true"><i id="qrBar"></i></div><p class="small muted" id="qrTxt" style="margin:8px 0 0">Kod jednorazowy · wygaśnie za 60 s</p></div>
-    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}Zasymuluj skanowanie</button>
+    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}Zasymuluj skanowanie przez sklep</button>
       <button type="button" class="btn btn-ghost btn-block" data-act="newQr" hidden>Wygeneruj nowy kod</button></div>`,
     after() {
       let left = 60;
@@ -604,8 +604,8 @@ SCREENS.sprawa = (id) => {
     title: esc(c.title), back: '#/sprawy', tab: 'sprawy',
     html: `<div class="card"><div class="ct"><b>${esc(c.title)}</b><span>${esc(c.who)}</span></div>
       <div class="divider"></div>${tracker(c)}</div>
-      ${c.id === 'usreply' ? banner('Urzędowe poświadczenie odbioru (UPO): odpowiedź doręczona 20.11.2026. Potwierdzenie demonstracyjne.', 'ok', 'check') : ''}
-      ${finished ? banner('Sprawa zakończona w symulacji.', 'ok', 'check') : banner('Powiadomimy Cię o każdej zmianie. Nie musisz dzwonić do urzędu.', 'info', 'bell')}
+      ${c.id === 'usreply' ? banner('Urzędowe poświadczenie odbioru (UPO): odpowiedź doręczona 20.11.2026.', 'ok', 'check') : ''}
+      ${finished ? banner('Sprawa zakończona. Wszystkie potwierdzenia masz w aplikacji.', 'ok', 'check') : banner('Powiadomimy Cię o każdej zmianie. Nie musisz dzwonić do urzędu.', 'info', 'bell')}
       ${c.contact ? `<div class="card">${kv([['Prowadzi', c.contact], ['Numer sprawy', c.no || '—']])}</div>` : ''}`
   };
 };
@@ -674,7 +674,7 @@ SCREENS.pismo = (id) => {
   const plainText = T.plain.map(([h, p]) => `${h} ${p}`).join(' ');
   let actions = '';
   if (L.id === 'us') actions = S.letters.us.answered
-    ? `${banner('Odpowiedź wysłana 20.11. Urząd potwierdził odbiór (UPO) w symulacji.', 'ok', 'check')}
+    ? `${banner('Odpowiedź wysłana 20.11. Urząd potwierdził odbiór (UPO).', 'ok', 'check')}
       ${S.letters.us.reply ? `<details class="card"><summary>Wysłana odpowiedź</summary><p class="draft-preview">${esc(S.letters.us.reply)}</p>${taxAttachments()}</details>` : ''}
       <button type="button" class="btn btn-ghost btn-block" data-go="#/sprawa/usreply">Sprawdź doręczenie</button>`
     : `<button type="button" class="btn btn-block" data-act="replyUS">${icon('send')}Odpowiedz i dołącz faktury</button>
@@ -749,7 +749,7 @@ SCREENS.prywatnosc = () => {
       <div style="display:flex;gap:12px"><span class="ic red">${icon('alert')}</span><div class="ct"><b>Czy to byłaś Ty?</b><span>${sus.when} · ${esc(sus.who)} sprawdzała Twój PESEL przy wniosku o pożyczkę.</span></div></div>
       <div class="btn-row two"><button type="button" class="btn btn-sm" data-act="notMe">To nie ja</button><button type="button" class="btn btn-ghost btn-sm" data-act="wasMe">Tak, to ja</button></div>
     </div>` : S.reported === 'recognized' ? banner('Oznaczyłaś to sprawdzenie jako swoje.', 'ok', 'check')
-      : banner('Podejrzane sprawdzenie zostało zgłoszone w symulacji.', 'ok', 'check')}
+      : banner('Zgłoszone. PESEL jest zastrzeżony, a sprawa trafiła do UODO i na policję. Firma pożyczkowa nie udzieli pożyczki na Twoje dane.', 'ok', 'check')}
     <div class="list">${log.map(l => `<button type="button" class="row" data-act="logDetail" data-arg="${l.id}"><span class="ic ${l.tone}">${icon(l.ic)}</span><span class="ct"><b>${esc(l.who)}</b><span>${esc(l.why)} · ${esc(l.when)}</span></span>${icon('chevR', 'width="18"')}</button>`).join('')}</div>
     <h3 class="h3">Aktywne udostępnienia</h3>
     ${S.shares.length ? `<div class="list">${S.shares.map(s => `<div class="row"><span class="ic ok">${icon('qr')}</span><span class="ct"><b>${esc(s.who)}</b><span>${esc(s.what)} · ${esc(s.until)}</span></span><button type="button" class="btn btn-ghost btn-sm" data-act="revoke" data-arg="${s.id}">Cofnij</button></div>`).join('')}</div>` : '<p class="p muted small">Nikt nie ma teraz stałego dostępu do Twoich danych.</p>'}
@@ -949,7 +949,12 @@ const FLOWS = {
       progress('anna', c, updates.map(([ms, , msg]) => [ms, msg]));
       return c;
     },
-    doneText: d => ({ h: `Gotowe! Witaj, ${esc(d.name)}!`, p: 'Wybrane sprawy zostały przekazane. Powiadomimy Cię o każdym kroku.', save: 'Jeden podpis i wspólny status wybranych spraw' })
+    doneText: d => {
+      const n = 2 + [d.b.meld, d.b.nfz, d.b.s800].filter(Boolean).length;
+      const inst = 1 + (d.b.meld ? 1 : 0) + (d.b.nfz || d.b.s800 ? 1 : 0) + (d.b.nfz ? 1 : 0);
+      const spraw = n >= 5 ? 'spraw' : 'sprawy';
+      return { h: `Gotowe! Witaj, ${esc(d.name)}!`, p: `Sprawy trafiły do ${inst} instytucji. Nie musisz nigdzie chodzić. Powiadomimy Cię o każdym kroku.`, save: `${n} ${spraw} → 1 podpis · 0 wizyt w urzędzie · ok. 3 godziny mniej` };
+    }
   },
 
   /* ---------- Przeprowadzka ---------- */
@@ -1183,7 +1188,7 @@ function camBox(d) {
   return `<div class="card" style="text-align:center">
     <div style="width:150px;height:190px;margin:0 auto;border-radius:90px/110px;border:3px dashed ${d.cam >= 4 ? 'var(--ok)' : 'var(--navy)'};display:grid;place-items:center;background:var(--surface-2)">${icon('user', 'width="80" height="80" style="color:#9aa6b6"')}</div>
     <ul class="summary-list" style="margin-top:12px;text-align:left">${checks.map((c, i) => `<li style="${i < d.cam ? '' : 'opacity:.45'}">${icon(i < d.cam ? 'check' : 'clock')}<span>${c}</span></li>`).join('')}</ul>
-    ${d.cam === 0 ? `<button type="button" class="btn btn-navy btn-block" data-act="takePhoto" style="margin-top:12px">${icon('camera')}Zasymuluj zdjęcie</button>` : d.cam >= 4 ? `<p class="small" style="color:var(--ok);font-weight:700;margin:10px 0 0">Zdjęcie spełnia wymagania</p>` : `<p class="small muted" style="margin:10px 0 0">Sprawdzamy zdjęcie…</p>`}
+    ${d.cam === 0 ? `<button type="button" class="btn btn-navy btn-block" data-act="takePhoto" style="margin-top:12px">${icon('camera')}Zrób zdjęcie</button>` : d.cam >= 4 ? `<p class="small" style="color:var(--ok);font-weight:700;margin:10px 0 0">Zdjęcie spełnia wymagania</p>` : `<p class="small muted" style="margin:10px 0 0">Sprawdzamy zdjęcie…</p>`}
   </div>`;
 }
 
@@ -1242,7 +1247,7 @@ function rerenderStep() {
 }
 function summaryView(def) {
   const items = def.summary(flow.d);
-  return `<p class="p">Wyślemy ${items.length > 1 ? `<b>${items.length} sprawy</b> do różnych instytucji, ale podpisujesz <b>raz</b>.` : 'jedną sprawę.'}</p>
+  return `<p class="p">Wyślemy ${items.length > 1 ? `<b>${items.length} ${items.length >= 5 ? 'wniosków' : 'wnioski'}</b> do różnych instytucji, ale podpisujesz <b>raz</b>.` : 'jeden wniosek.'}</p>
     <ul class="summary-list">${items.map(it => `<li>${icon('check')}<span><b>${esc(it.to)}</b><small>${esc(it.what)}</small></span></li>`).join('')}</ul>
     <div style="margin-top:10px">${banner('Nic nie wyślemy bez Twojego podpisu. Możesz wrócić i zmienić każdy krok.', 'info', 'lock')}</div>`;
 }
@@ -1347,7 +1352,7 @@ function chatHtml() {
 function openAssistant() {
   openSheet(`${sheetHead(`${icon('spark', 'width="20" height="20" style="vertical-align:-4px;color:var(--red)"')} Asystent`)}
     <div class="sheet-body"><div class="chat" id="chat" aria-live="polite">${chatHtml()}</div></div>
-    <p class="ai-note">Prototyp: odpowiedzi są przygotowane wcześniej, bez modelu AI. Docelowo: polski model Bielik.<br>Używaj danych testowych. Mikrofon korzysta z rozpoznawania mowy przeglądarki.</p>
+    <p class="ai-note">Prototyp: odpowiedzi są przygotowane wcześniej, bez modelu AI. Docelowo: polski model Bielik.<br>Nic nie wysyłam bez Twojego potwierdzenia.</p>
     <form class="composer" id="composer" autocomplete="off">
       <label class="sr" for="askInput">Twoje pytanie</label>
       <input id="askInput" type="text" placeholder="${isAnna() ? 'Np. przeprowadzam się w grudniu' : 'Proszę napisać lub nacisnąć mikrofon'}" enterkeyhint="send">
@@ -1496,10 +1501,14 @@ const A = {
   },
   async doSign() {
     const b = $('#signBtn'); if (!b || b.disabled) return;
-    b.disabled = true; b.textContent = 'Symulujemy weryfikację…';
+    b.disabled = true; b.textContent = 'Sprawdzam Face ID…';
     const f = $('#faceid'); f.classList.add('scan');
     const cb = openSign.cb;
     await wait(1100);
+    if (!b.isConnected) return;
+    f.classList.remove('scan'); f.classList.add('ok'); f.innerHTML = icon('check');
+    b.textContent = 'Podpisano';
+    await wait(500);
     if (!b.isConnected) return;
     closeSheet();
     cb?.();

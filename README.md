@@ -22,7 +22,7 @@ Koncepcja na **mObywatel Challenge**. Aplikacja przygotowuje sprawy na podstawie
 
 HTML, CSS i JavaScript bez bibliotek, kluczy API i serwera aplikacji. Asystent tekstowy odpowiada na podstawie reguł. Bielik i PLLuM to potencjalne modele dla przyszłej wersji. Odczyt i rozpoznawanie mowy korzystają z Web Speech API i zależą od przeglądarki, a rozpoznawanie wymaga dostępu do mikrofonu.
 
-Wszystkie scenariusze używają fikcyjnych danych. Wnioski, podpisy, płatności, zdjęcia i skanowanie są symulowane. Stan demonstracji jest zapisywany w bieżącej przeglądarce. Używaj danych testowych. Jest to niezależny prototyp koncepcyjny, bez połączenia z usługami administracji publicznej.
+Wszystkie scenariusze używają fikcyjnych danych. Wnioski, podpisy, płatności, zdjęcia i skanowanie są symulowane. Stan demonstracji jest zapisywany w bieżącej przeglądarce. Jest to niezależny prototyp koncepcyjny, bez połączenia z usługami administracji publicznej.
 
 ## Uruchomienie lokalnie
 

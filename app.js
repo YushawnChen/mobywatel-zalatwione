@@ -183,6 +183,27 @@ function qrSvg(seed) {
 }
 
 /* =========================================================
+   Anonimowe statystyki (GoatCounter: bez cookies, bez danych osobowych)
+   ========================================================= */
+const gcQueue = [];
+function track(path, event = false) {
+  try {
+    const gc = window.goatcounter;
+    if (gc && typeof gc.count === 'function') gc.count({ path, title: event ? path : document.title, event });
+    else if (gcQueue.length < 20) gcQueue.push([path, event]);
+  } catch (e) { /* statystyki nigdy nie psują prototypu */ }
+}
+let gcTries = 0;
+const gcTimer = setInterval(() => {
+  gcTries++;
+  const gc = window.goatcounter;
+  if (gc && typeof gc.count === 'function') {
+    clearInterval(gcTimer);
+    gcQueue.splice(0).forEach(([p, e]) => { try { gc.count({ path: p, title: e ? p : document.title, event: e }); } catch (err) { /* ignore */ } });
+  } else if (gcTries > 40) clearInterval(gcTimer);
+}, 500);
+
+/* =========================================================
    Toast, mowa, arkusze
    ========================================================= */
 let toastTimer;
@@ -269,6 +290,7 @@ function render(force) {
   const key = r.name + '/' + (r.arg || '');
   const changed = key !== lastRoute;
   lastRoute = key;
+  if (changed && r.name !== 'asystent') track('/' + r.name + (r.arg ? '/' + r.arg : ''));
   const st = set();
   const app = $('#app');
   app.classList.toggle('simple', !!st.simple);
@@ -1659,6 +1681,7 @@ function renderGuide() {
 }
 A.scenario = i => {
   const [p, to] = SCEN[+i];
+  track('scenariusz-' + (+i + 1), true);
   closeGuide();
   if (S.persona !== p) { S.persona = p; save(); }
   flow = null; closeSheet();

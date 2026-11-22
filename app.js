@@ -1744,6 +1744,17 @@ if (qp && Object.hasOwn(PEOPLE, qp)) { S.persona = qp; save(); }
 if (synth) synth.getVoices();
 renderGuide();
 render(true);
+
+/* Ekran telefonu ma dokładnie 390×844 pt jak iPhone 14/15, z ramką dookoła; na niskich ekranach skalujemy całość */
+function fitDevice() {
+  const d = $('#device');
+  if (window.innerWidth <= 900) { d.style.zoom = ''; return; }
+  const room = window.innerHeight - (window.innerHeight <= 700 ? 24 : 48);
+  const k = Math.max(0.55, Math.min(1, room / 866));
+  d.style.zoom = k >= 0.999 ? '' : k.toFixed(3);
+}
+window.addEventListener('resize', fitDevice);
+fitDevice();
 for (const [who, cases] of Object.entries(S.cases)) {
   for (const c of cases) scheduleProgress(who, c);
 }

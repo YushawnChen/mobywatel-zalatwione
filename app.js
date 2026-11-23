@@ -486,7 +486,7 @@ SCREENS.dokumenty = () => {
     <button type="button" class="doc-card g-car card-btn" data-go="#/dokument/pojazd" style="display:block;border:0;text-align:left;color:#fff;width:100%">
       <div class="doc-top"><span>Pojazd</span><span>PO 4821N</span></div>
       <div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Octavia</div><div class="meta">OC do 01.12.2026<br>Przegląd do 05.01.2027</div></div></div></button>
-    ${S.carDone ? `<div class="doc-card g-car" style="filter:hue-rotate(-20deg)"><div class="doc-top"><span>Pojazd · nowy</span><span>PZ 5R418</span></div><div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Fabia</div><div class="meta">Pozwolenie czasowe do 19.12.2026<br>OC do 14.03.2027</div></div></div></div>` : ''}
+    ${S.carDone ? `<button type="button" class="doc-card g-car card-btn" data-go="#/dokument/fabia" style="display:block;border:0;text-align:left;color:#fff;width:100%;filter:hue-rotate(-20deg)"><div class="doc-top"><span>Pojazd · nowy</span><span>PZ 5R418</span></div><div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Fabia</div><div class="meta">Pozwolenie czasowe do 19.12.2026<br>OC do 14.03.2027</div></div></div></button>` : ''}
     ${S.babyDone ? `<button type="button" class="doc-card g-kdr card-btn" data-go="#/dokument/zosia" style="display:block;border:0;text-align:left;color:#fff;width:100%"><div class="doc-top"><span>Rodzina</span><span>Odpis aktu</span></div><div class="doc-body"><div class="photo">${icon('baby')}</div><div><div class="name">${esc(child().full)}</div><div class="meta">ur. 17.11.2026, Poznań<br>PESEL nadany</div></div></div></button>` : ''}`
   };
 };
@@ -530,6 +530,21 @@ SCREENS.dokument = (arg) => {
         <button type="button" class="row" data-act="info" data-arg="sell"><span class="ic">${icon('swap')}</span><span class="ct"><b>Sprzedaję to auto</b><span>Zgłoszenie zbycia i umowa w aplikacji</span></span>${icon('chevR', 'width="18"')}</button>
         <button type="button" class="row" data-go="#/wniosek/car"><span class="ic">${icon('plus')}</span><span class="ct"><b>Kupiłam inne auto</b><span>Rejestracja bez kolejki</span></span>${icon('chevR', 'width="18"')}</button>
       </div>`
+    };
+  }
+  if (arg === 'fabia' && S.carDone) {
+    return {
+      title: 'Skoda Fabia · PZ 5R418', back: '#/dokumenty', tab: 'dokumenty',
+      html: `<div class="doc-card g-car" style="filter:hue-rotate(-20deg)"><div class="doc-top"><span>Pojazd · nowy</span><span>PZ 5R418</span></div><div class="doc-body"><div class="photo">${icon('car')}</div><div><div class="name">Skoda Fabia 1.0 TSI</div><div class="meta">Rok 2019 · przebieg 84 312 km</div></div></div></div>
+      ${banner('Auto jest zarejestrowane na Ciebie. Do czasu dowodu rejestracyjnego jeździsz na <b>pozwoleniu czasowym</b> w aplikacji.', 'ok', 'check')}
+      <h3 class="h3">Terminy</h3>
+      <div class="list">
+        <div class="row"><span class="ic info">${icon('id')}</span><span class="ct"><b>Pozwolenie czasowe do 19.12.2026</b><span>Dowód rejestracyjny jest w druku. Wyślemy go pocztą.</span></span></div>
+        <div class="row"><span class="ic ok">${icon('shield')}</span><span class="ct"><b>OC do 14.03.2027</b><span>Polisa poprzedniego właściciela przeszła na Ciebie.</span></span></div>
+        <div class="row"><span class="ic warn">${icon('cal')}</span><span class="ct"><b>Przegląd techniczny do 11.03.2027</b><span>Przypomnimy 30 i 7 dni wcześniej.</span></span></div>
+      </div>
+      <div class="card">${kv([['Kradzież / zastaw', 'brak'], ['Ostatni przebieg', '84 312 km (03.2026)']])}${src('CEPiK i Ubezpieczeniowy Fundusz Gwarancyjny')}</div>
+      <div class="list"><button type="button" class="row" data-go="#/sprawa/car"><span class="ic">${icon('folder')}</span><span class="ct"><b>Status rejestracji</b><span>Wydział Komunikacji UM Poznania</span></span>${icon('chevR', 'width="18"')}</button></div>`
     };
   }
   if (arg === 'zosia' && isAnna() && S.babyDone) {
@@ -839,9 +854,9 @@ SCREENS.rodzina = () => {
       ${perm('sign', 'Podpisuję w jej imieniu', 'Tylko z pełnomocnictwem notarialnym', true)}
     </div>
     <h3 class="h3">Terminy mamy</h3>
-    ${sent ? cardBtn({ icon: 'check', tone: 'ok', title: 'Wniosek o nowy dowód mamy', sub: sent.done ? 'Mama wysłała wniosek. Odbiór: Urząd Miasta Gniezna.' : 'Wysłany do mamy. Czeka, aż go zatwierdzi.', go: '#/rodzina' })
+    ${sent ? cardBtn({ icon: 'check', tone: 'ok', title: 'Wniosek o nowy dowód mamy', sub: sent.done ? 'Mama wysłała wniosek. Odbiór: Urząd Miasta Gniezna.' : 'Wysłany do mamy. Czeka, aż go zatwierdzi.', ...(sent.done ? { act: 'toastInfo', arg: 'Mama wysłała wniosek. Gdy dowód będzie gotowy, oboje dostaniecie powiadomienie.' } : { act: 'becomeHalina' }) })
       : cardBtn({ icon: 'id', tone: 'warn', title: 'Dowód mamy traci ważność 15.01.2027', sub: 'Przygotuj wniosek. Mama zatwierdzi go jednym przyciskiem.', due: 'za 56 dni', dueTone: 'due-warn', act: 'prepareForMom' })}
-    ${cardBtn({ icon: 'pill', title: '2 e-recepty do odbioru', sub: 'Apteka „Zdrowie”, Gniezno', go: '#/rodzina' })}
+    ${cardBtn({ icon: 'pill', title: '2 e-recepty do odbioru', sub: 'Apteka „Zdrowie”, Gniezno', go: '#/recepty' })}
     ${sent && !sent.done ? `<div class="btn-row"><button type="button" class="btn btn-navy btn-block" data-act="becomeHalina">${icon('swap')}Zobacz, co widzi mama</button></div>` : ''}`
   };
 };
@@ -880,6 +895,19 @@ SCREENS.leki = () => ({
     <div class="row"><span class="ic info">${icon('pill')}</span><span class="ct"><b>Metformina 500 mg</b><span>2 razy dziennie · ważna do 14.12</span></span></div>
     <div class="row"><span class="ic info">${icon('pill')}</span><span class="ct"><b>Bisoprolol 5 mg</b><span>Rano · ważna do 14.12</span></span></div>
   </div>`
+});
+
+/* ---------- E-recepty mamy (widok Anny) ---------- */
+SCREENS.recepty = () => ({
+  title: 'E-recepty mamy', back: '#/rodzina', tab: 'wiecej',
+  html: `<h2 class="h">E-recepty mamy</h2>
+  ${banner('Widzisz leki mamy, bo pozwoliła Ci widzieć jej terminy. <b>Kod do apteki widzi tylko mama</b> w swoim telefonie.', 'info', 'shield')}
+  <div class="list">
+    <div class="row"><span class="ic info">${icon('pill')}</span><span class="ct"><b>Metformina 500 mg</b><span>2 razy dziennie · ważna do 14.12</span></span></div>
+    <div class="row"><span class="ic info">${icon('pill')}</span><span class="ct"><b>Bisoprolol 5 mg</b><span>Rano · ważna do 14.12</span></span></div>
+  </div>
+  ${kv([['Apteka', 'Apteka „Zdrowie”, Gniezno'], ['Do odbioru', 'do 14.12']])}
+  <div class="btn-row"><button type="button" class="btn btn-navy btn-block" data-act="toastInfo" data-arg="Mama dostała przypomnienie: dwie e-recepty czekają w aptece „Zdrowie”.">${icon('bell')}Przypomnij mamie</button></div>`
 });
 
 /* ---------- Ustawienia dostępności ---------- */

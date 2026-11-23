@@ -306,7 +306,7 @@ function render(force) {
 
   const view = (Object.hasOwn(SCREENS, r.name) ? SCREENS[r.name] : SCREENS.start)(r.arg);
   $('#screen').innerHTML = view.html;
-  renderAppbar(view);
+  renderAppbar(view, r.name);
   renderTabbar(view.tab || r.name);
   syncGuide();
   if (view.after) view.after();
@@ -317,13 +317,14 @@ function render(force) {
   if (st.autoRead && changed && view.say) setTimeout(() => speak(view.say), 300);
 }
 
-function renderAppbar(view) {
+function renderAppbar(view, name) {
   const bar = $('#appbar');
   const unseen = S.unseen[S.persona] || 0;
   const bell = `<button type="button" class="iconbtn" data-act="openNotifs" aria-label="Powiadomienia${unseen ? `, nowe: ${unseen}` : ''}">${icon('bell')}${unseen ? `<span class="dot">${unseen}</span>` : ''}</button>`;
   const ask = `<button type="button" class="iconbtn" data-act="openAssistant" aria-label="Asystent">${icon('spark')}</button>`;
   const guide = `<button type="button" class="guide-fab" id="guideFab" data-act="toggleGuide" aria-controls="guide" aria-expanded="${$('#guide').classList.contains('open')}"><span aria-hidden="true">?</span><span>Scenariusze</span></button>`;
-  if (view.title || (set().simple && view.back)) {
+  // W trybie prostym nie ma dolnego paska, więc każdy ekran poza startem musi mieć „Wróć”.
+  if (view.title || (set().simple && name !== 'start' && Object.hasOwn(SCREENS, name))) {
     bar.innerHTML = `<button type="button" class="iconbtn" data-go="${view.back || '#/start'}" aria-label="Wróć">${icon('chevL')}</button><div class="title">${view.title || ''}</div>${ask}${guide}`;
   } else {
     bar.innerHTML = `<div class="brand">${LOGO}<span>mObywatel</span></div><div class="spacer"></div>${ask}${bell}${guide}`;
@@ -475,6 +476,7 @@ SCREENS.dokumenty = () => {
     };
   }
   return {
+    title: set().simple ? 'Dokumenty' : '', back: '#/start',
     html: `<h2 class="h">Dokumenty</h2>
     ${banner('Dotknij dokumentu, aby go pokazać lub <b>udostępnić tylko część danych</b>.', 'info', 'shield')}
     ${docCardHtml('dowod', true)}
@@ -563,21 +565,33 @@ const SHARE_OPTS = {
   full: { t: 'Pełne dane dowodu', d: 'Bank, notariusz, urząd. Zapiszemy, kto i kiedy pobrał dane.', show: ['Imię i nazwisko', 'Zdjęcie', 'PESEL', 'Data urodzenia', 'Numer dowodu'] }
 };
 const ALL_FIELDS = ['Pełnoletność: TAK', 'Imię i nazwisko', 'Zdjęcie', 'PESEL', 'Data urodzenia', 'Numer dowodu'];
+const DL_OPTS = {
+  dlcat: { t: 'Tylko „mam ważne prawo jazdy kat. B”', d: 'Wypożyczalnia aut, car sharing. Bez PESEL i punktów karnych.', show: ['Kategorie: B', 'Ważne do 30.06.2037'], who: 'Wypożyczalnia „AutoPoznań”' },
+  dlpts: { t: 'Uprawnienia i punkty karne', d: 'Pracodawca kierowcy, ubezpieczyciel. Bez PESEL i numeru dokumentu.', show: ['Imię i nazwisko', 'Kategorie: B', 'Ważne do 30.06.2037', 'Punkty karne: 3'], who: 'Pracodawca (dział kadr)' },
+  dlfull: { t: 'Pełne dane do kontroli drogowej', d: 'Policja, Inspekcja Transportu Drogowego. Zapiszemy, kto i kiedy sprawdzał.', show: ['Imię i nazwisko', 'Zdjęcie', 'PESEL', 'Numer prawa jazdy', 'Kategorie: B', 'Ważne do 30.06.2037', 'Punkty karne: 3'], who: 'Policja, kontrola drogowa' }
+};
+const DL_FIELDS = ['Imię i nazwisko', 'Zdjęcie', 'PESEL', 'Numer prawa jazdy', 'Kategorie: B', 'Ważne do 30.06.2037', 'Punkty karne: 3'];
+let shareDoc = 'dowod';
+const shareOpts = () => shareDoc === 'prawojazdy' ? DL_OPTS : SHARE_OPTS;
 SCREENS.udostepnij = (arg) => {
   clearInterval(shareTimer);
-  const o = SHARE_OPTS[shareChoice];
-  const fields = ALL_FIELDS.filter(f => f !== 'Pełnoletność: TAK' || shareChoice === 'age');
+  shareDoc = arg === 'prawojazdy' && isAnna() ? 'prawojazdy' : 'dowod';
+  const opts = shareOpts();
+  if (!Object.hasOwn(opts, shareChoice)) shareChoice = Object.keys(opts)[0];
+  const o = opts[shareChoice];
+  const dl = shareDoc === 'prawojazdy';
+  const fields = dl ? DL_FIELDS : ALL_FIELDS.filter(f => f !== 'Pełnoletność: TAK' || shareChoice === 'age');
   return {
-    title: 'Udostępnij dane', back: arg === 'prawojazdy' ? '#/dokument/prawojazdy' : '#/dokument/dowod', tab: 'dokumenty',
+    title: dl ? 'Udostępnij prawo jazdy' : 'Udostępnij dane', back: dl ? '#/dokument/prawojazdy' : '#/dokument/dowod', tab: 'dokumenty',
     html: `<h2 class="h">Co chcesz pokazać?</h2>
     <div role="radiogroup" aria-label="Zakres danych">
-    ${Object.entries(SHARE_OPTS).map(([k, v]) => `<button type="button" class="share-opt" role="radio" aria-checked="${k === shareChoice}" data-act="shareOpt" data-arg="${k}"><span class="radio"></span><span class="ct"><b>${v.t}</b><span>${v.d}</span></span></button>`).join('')}
+    ${Object.entries(opts).map(([k, v]) => `<button type="button" class="share-opt" role="radio" aria-checked="${k === shareChoice}" data-act="shareOpt" data-arg="${k}"><span class="radio"></span><span class="ct"><b>${v.t}</b><span>${v.d}</span></span></button>`).join('')}
     </div>
     <h3 class="h3">Druga strona zobaczy</h3>
     <div class="reveal">${fields.map(f => o.show.includes(f) ? `<div class="on"><span>${icon('check', 'width="16" height="16"')} ${f}</span><span>widoczne</span></div>` : `<div class="off"><span>${f}</span><span>ukryte</span></div>`).join('')}</div>
     <h3 class="h3">Pokaż kod do zeskanowania</h3>
     <div class="qr-wrap">${qrSvg(shareChoice.length * 7919 + 13)}<div class="timer" aria-hidden="true"><i id="qrBar"></i></div><p class="small muted" id="qrTxt" style="margin:8px 0 0">Kod jednorazowy · wygaśnie za 60 s</p></div>
-    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}Zasymuluj skanowanie przez sklep</button>
+    <div class="btn-row"><button type="button" class="btn btn-ghost btn-block" data-act="simScan">${icon('eye')}${dl ? 'Zasymuluj sprawdzenie kodu' : 'Zasymuluj skanowanie przez sklep'}</button>
       <button type="button" class="btn btn-ghost btn-block" data-act="newQr" hidden>Wygeneruj nowy kod</button></div>`,
     after() {
       let left = 60;
@@ -728,6 +742,7 @@ SCREENS.pismo = (id) => {
 
 /* ---------- Więcej ---------- */
 SCREENS.wiecej = () => ({
+  title: set().simple ? 'Więcej' : '', back: '#/start',
   html: `<h2 class="h">Więcej</h2>
   <div class="list">
     <button type="button" class="row" data-go="#/prywatnosc"><span class="ic red">${icon('shield')}</span><span class="ct"><b>Prywatność i moje dane</b><span>Kto sprawdzał moje dane, udostępnienia, zastrzeżenie PESEL</span></span>${icon('chevR', 'width="18"')}</button>
@@ -1544,8 +1559,8 @@ const A = {
     clearInterval(shareTimer);
     $('#qrBar').style.width = '0%';
     $('#qrTxt').textContent = 'Kod został wykorzystany.';
-    const o = SHARE_OPTS[shareChoice];
-    S.extraLog.unshift({ id: 'scan' + Date.now(), when: 'Przed chwilą', who: shareChoice === 'age' ? 'Sklep „Pod Ratuszem”' : shareChoice === 'name' ? 'Hotel „Stare Miasto”' : 'Twój bank', why: 'Zeskanowano Twój kod QR', what: o.show.join(', '), basis: 'Twoja zgoda (kod QR)', tone: 'ok', ic: 'qr' });
+    const o = shareOpts()[shareChoice];
+    S.extraLog.unshift({ id: 'scan' + Date.now(), when: 'Przed chwilą', who: o.who || (shareChoice === 'age' ? 'Sklep „Pod Ratuszem”' : shareChoice === 'name' ? 'Hotel „Stare Miasto”' : 'Twój bank'), why: 'Zeskanowano Twój kod QR', what: o.show.join(', '), basis: 'Twoja zgoda (kod QR)', tone: 'ok', ic: 'qr' });
     save();
     toast(`Zeskanowano. Druga strona zobaczyła tylko: <b>${o.show.join(', ')}</b>. Zapisaliśmy to w historii.`, 'shield');
   },
@@ -1758,7 +1773,7 @@ document.addEventListener('input', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (sheetKind) closeSheet(); else closeGuide(); }
 });
-$('#resetDemo').addEventListener('click', () => { S = initialState(); save(); flow = null; shareChoice = 'age'; letterView = 'plain'; taxDraft = TAX_DRAFT; closeSheet(); closeGuide(); if (synth) synth.cancel(); location.hash = '#/start'; render(true); toast('Demo zaczyna się od nowa.', 'check'); });
+$('#resetDemo').addEventListener('click', () => { S = initialState(); save(); flow = null; shareChoice = 'age'; shareDoc = 'dowod'; letterView = 'plain'; taxDraft = TAX_DRAFT; closeSheet(); closeGuide(); if (synth) synth.cancel(); location.hash = '#/start'; render(true); toast('Demo zaczyna się od nowa.', 'check'); });
 window.addEventListener('hashchange', () => { closeSheet(); render(); });
 
 /* Start */

@@ -1720,7 +1720,7 @@ const SCEN = [
   ['anna', 'chat', 'Asystent: napisz lub powiedz', 'Spróbuj: „przeprowadzam się”, „zgubiłam portfel”, „kiedy mam przegląd?”.']
 ];
 function renderGuide() {
-  $('#scenarios').innerHTML = SCEN.map(([p, to, t, d], i) => `<li><button type="button" data-act="scenario" data-arg="${i}"><span class="num">${i + 1}</span><span><strong>${t}</strong><small>${d}</small></span></button></li>`).join('');
+  $('#scenarios').innerHTML = SCEN.map(([p, to, t, d], i) => `<li><button type="button" data-act="scenario" data-arg="${i}" title="${esc(d)}"><span class="num">${i + 1}</span><strong>${t}</strong></button></li>`).join('');
 }
 A.scenario = i => {
   const [p, to] = SCEN[+i];

@@ -401,3 +401,33 @@ button.row:hover { background: var(--surface-2); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- odchudzony panel (v16): mniej tekstu, telefon w centrum ---------- */
+.stage { grid-template-columns: 340px auto; gap: 72px; }
+.guide-inner { padding: 4px 2px 12px; }
+.badge-proto { margin-bottom: 10px; }
+.guide-title { font-size: 30px; margin-bottom: 8px; }
+.guide-lead { font-size: 15px; line-height: 1.45; color: var(--muted); margin: 0 0 18px; }
+.persona-switch { gap: 6px; }
+.persona-btn { padding: 7px 9px; border-radius: 12px; gap: 8px; }
+.persona-btn .avatar { width: 30px; height: 30px; font-size: 11px; }
+.persona-btn strong { font-size: 14px; }
+.persona-btn small { font-size: 11.5px; margin-top: 0; }
+.guide-h { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 20px 0 8px; }
+.scenarios { gap: 4px; }
+.scenarios li button { align-items: center; padding: 8px 10px; border-radius: 10px; gap: 10px; }
+.scenarios .num { width: 22px; height: 22px; font-size: 11px; margin-top: 0; }
+.scenarios strong { font-size: 14px; font-weight: 600; }
+.more { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
+.more summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--navy); list-style: none; display: flex; align-items: center; gap: 6px; }
+.more summary::-webkit-details-marker { display: none; }
+.more summary::before { content: "+"; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-2); font-size: 13px; }
+.more[open] summary::before { content: "–"; }
+.more .principles { margin: 10px 0 12px; font-size: 13px; gap: 4px; }
+.more .compare { font-size: 12px; }
+.guide-foot { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.linkbtn { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--navy); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 900px) { .stage { grid-template-columns: none; } }
+.guide-title { font-size: 28px; white-space: nowrap; }
+@media (max-width: 900px) { .guide-title { font-size: 26px; white-space: normal; } }
+@media (max-width: 900px) { .persona-switch { grid-template-columns: 1fr 1fr; } }

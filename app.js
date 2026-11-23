@@ -374,7 +374,7 @@ SCREENS.start = () => {
       <span class="pill">${icon('heart', 'width="14" height="14"')} Zdarzenie w Twoim życiu</span>
       <h3 id="heroT">Witamy Zosię na świecie!</h3>
       <p>Szpital zgłosił narodziny 17.11. Przygotowaliśmy jeden wniosek zamiast pięciu: akt urodzenia, PESEL, meldunek, NFZ i 800+.</p>
-      <button type="button" class="btn" data-go="#/wniosek/baby">Sprawdź i podpisz · 4 kroki</button>
+      <button type="button" class="btn" data-go="#/wniosek/baby">Sprawdź i podpisz · 5 kroków</button>
     </section>`;
   } else if (!S.idDone && !S.lostDone) {
     hero = `<section class="hero" aria-labelledby="heroT">
@@ -1163,7 +1163,7 @@ const FLOWS = {
   /* ---------- Kupno samochodu ---------- */
   car: {
     title: 'Rejestracja samochodu', icon: 'car',
-    savings: 'Zamiast kolejki w wydziale komunikacji: 4 kroki w telefonie',
+    savings: 'Zamiast kolejki w wydziale komunikacji: 5 kroków w telefonie',
     init: () => ({ plate: '', found: false, plates: 'keep', oc: 'keep', pay: 'blik' }),
     steps: [
       {

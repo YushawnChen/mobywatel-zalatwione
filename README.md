@@ -1,29 +1,31 @@
-# mObywatel „Załatwione” – klikalny prototyp
+# mObywatel „Załatwione” – clickable prototype
 
-Koncepcja na **mObywatel Challenge**. Aplikacja przygotowuje sprawy na podstawie zdarzeń życiowych, pokazuje źródła danych i pozwala sprawdzić, co zostanie przekazane, przed potwierdzeniem.
+A concept for the **mObywatel Challenge**. The app prepares official matters based on life events, shows where every piece of data comes from, and lets you check exactly what will be shared before you confirm.
 
-[Otwórz prototyp](https://yushawnchen.github.io/mobywatel-zalatwione/). W przeglądarce nie trzeba się logować, niczego instalować ani nadawać uprawnień. Na telefonie listę ścieżek otwiera przycisk **Scenariusze** w nagłówku. W przewodniku jest też przycisk **Zacznij demo od nowa**.
+[Open the prototype](https://yushawnchen.github.io/mobywatel-zalatwione/). No login, installation or permissions are needed in the browser. On a phone, the **Scenariusze** button in the header opens the list of paths. The guide also has a **Zacznij demo od nowa** (restart demo) button. The prototype's interface is in Polish.
 
-## Ścieżki demonstracyjne
+Promo video (80 s): https://youtu.be/onUIKGG8pd0
 
-1. **Urodziło się dziecko** – wpisz imię, zasymuluj zgodę drugiego rodzica, sprawdź zakres wniosku, podpisz i śledź status.
-2. **Przeprowadzka** – wybierz przykładowy adres, określ typ pobytu, sprawdź odbiorców i podpisz.
-3. **Pismo z urzędu skarbowego** – porównaj oryginał z objaśnieniem, zmień odpowiedź, sprawdź treść i trzy przykładowe faktury, podpisz i zobacz potwierdzenie doręczenia.
-4. **Potwierdzenie wieku** – udostępnij tylko informację o pełnoletności, zasymuluj skan i sprawdź historię dostępu.
-5. **Historia dostępu** – sprawdź szczegóły, a następnie zgłoś podejrzaną próbę użycia danych.
-6. **Zgubiony portfel** – sprawdź i potwierdź unieważnienie dowodu oraz zastrzeżenie PESEL.
-7. **Nowy dowód** – zasymuluj zrobienie zdjęcia, wybierz godzinę odbioru i podpisz.
-8. **Kupno używanego auta** – użyj przykładowej umowy, potwierdź symulowaną opłatę i zobacz pozwolenie czasowe w Dokumentach.
-9. **Pomoc bliskiej osoby** – przygotuj wniosek jako Anna, przełącz się na Halinę i zdecyduj o jego wysłaniu.
-10. **Tryb prosty** – zmień wielkość tekstu i kontrast u Haliny i skorzystaj z dużych przycisków.
-11. **Asystent** – wpisz np. „przeprowadzam się” i przejdź z rozmowy do wniosku. Mikrofon jest opcjonalny.
+## Demo paths
 
-## Technologia i dane
+1. **A baby is born** – enter the name, simulate the other parent's consent, review what the application covers, sign and track its status.
+2. **Moving house** – pick a sample address, choose the type of stay, review the recipients and sign.
+3. **Letter from the tax office** – compare the original with the plain-language explanation, edit the reply, review the text and three sample invoices, sign and see the delivery confirmation.
+4. **Age verification** – share only the fact that you are over 18, simulate a scan and check the access history.
+5. **Access history** – view the details, then report a suspicious attempt to use your data.
+6. **Lost wallet** – review and confirm cancelling the ID card and freezing the PESEL number.
+7. **New ID card** – simulate taking a photo, choose a pickup time and sign.
+8. **Buying a used car** – use a sample contract, confirm a simulated payment and see the temporary registration permit in Documents.
+9. **Helping a family member** – prepare an application as Anna, switch to Halina and decide whether to send it.
+10. **Simple mode** – change the text size and contrast for Halina and use the large buttons.
+11. **Assistant** – type e.g. „przeprowadzam się” (I'm moving) and go from the conversation straight to the application. The microphone is optional.
 
-HTML, CSS i JavaScript bez bibliotek, kluczy API i serwera aplikacji. Asystent tekstowy odpowiada na podstawie reguł. Bielik i PLLuM to potencjalne modele dla przyszłej wersji. Odczyt i rozpoznawanie mowy korzystają z Web Speech API i zależą od przeglądarki, a rozpoznawanie wymaga dostępu do mikrofonu.
+## Technology and data
 
-Wszystkie scenariusze używają fikcyjnych danych. Wnioski, podpisy, płatności, zdjęcia i skanowanie są symulowane. Stan demonstracji jest zapisywany w bieżącej przeglądarce. Jest to niezależny prototyp koncepcyjny, bez połączenia z usługami administracji publicznej.
+HTML, CSS and JavaScript with no libraries, API keys or application server. The text assistant answers based on rules. Bielik and PLLuM are candidate models for a future version. Text-to-speech and speech recognition use the Web Speech API and depend on the browser; recognition requires microphone access.
 
-## Uruchomienie lokalnie
+All scenarios use fictional data. Applications, signatures, payments, photos and scans are simulated. The demo state is saved in the current browser. This is an independent concept prototype with no connection to any public administration services.
 
-Otwórz `index.html` w przeglądarce lub uruchom `python3 -m http.server` w katalogu repozytorium.
+## Running locally
+
+Open `index.html` in a browser, or run `python3 -m http.server` in the repository folder.
